@@ -134,9 +134,9 @@ def on_message(ws, buff):
             if bitmask & 8: skips += 16
             for i in range(skips): s.pop_uint8()
             cname = s.pop_str()
-            print('  Cell', cid, cname, 'at', cx, cy,
-                  'size:', csize, 'color: #%06x' % color,
-                  'Virus' if is_virus else '')
+            print('  Virus' if is_virus else '  Cell ',
+                  cid, cname, 'at', cx, cy,
+                  'size:', csize, 'color: #%06x' % color)
     elif 17 == ident:  # pos/size update?
         cell.x = x = s.pop_float64()
         cell.y = y = s.pop_float64()
