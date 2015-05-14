@@ -1,8 +1,5 @@
-import random
 import struct
-import urllib.request
-import socket
-import select
+import websocket
 
 def nice_hex(buffer):
     specials = {
@@ -98,9 +95,7 @@ msg_spectate = lambda: struct.pack('!B', 1)
 
 cell = PlayerCell()
 
-def on_message(sock, buff):
-    if not buff:
-        return
+def on_message(ws, buff):
     print('RECV', nice_hex(buff))
     s = BufferStruct(buff)
     ident = s.pop_uint8()
@@ -163,52 +158,36 @@ def on_message(sock, buff):
     else:
         print('  Unexpected ident')
 
+def on_error(ws, error):
+    print('ERROR', error)
+
+def on_close(ws):
+    print('CLOSED')
+
+def on_open(ws):
+    ws.send(msg_handshake())
+    # import random
+    # nick = ''.join(['aeiouy'[random.randint(0, 5)]]*5)
+    # print('Nick:', nick)
+    # ws.send(msg_nick(nick))
+    # ws.send(msg_spectate())
+
 ####################
 
-def get_addr():
-    addr = urllib.request.urlopen('http://m.agar.io').read().decode().split('\n')[0]
+def get_url():
+    import urllib.request
+    addr = urllib.request.urlopen('http://m.agar.io')\
+            .read().decode().split('\n')[0]
     #addr = '213.219.37.141:443'
-    print('Got addr', addr)
-    ip, port = addr.split(':')
-    return ip, int(port)
+    url = 'ws://%s' % addr
+    print('Got url', url)
+    return url
 
-sock = socket.socket()
-sock.connect(get_addr())
-
-# send http request
-http_request = 'GET / HTTP/1.1\r\n'\
-'Host: 213.168.250.140:443\r\n'\
-'Connection: Upgrade\r\n'\
-'Pragma: no-cache\r\n'\
-'Cache-Control: no-cache\r\n'\
-'Upgrade: websocket\r\n'\
-'Origin: http://agar.io\r\n'\
-'Sec-WebSocket-Version: 13\r\n'\
-'DNT: 1\r\n'\
-'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36\r\n'\
-'Accept-Encoding: gzip, deflate, sdch\r\n'\
-'Accept-Language: en-US,en;q=0.8,de-DE;q=0.6,de;q=0.4\r\n'\
-'Sec-WebSocket-Key: ZxmohJ3OPQDEq2MbDD44oQ==\r\n'\
-'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n'\
-'\r\n'
-sock.send(http_request.encode())
-# recv http response
-r, w, e = select.select([sock], [], [])
-if not r:
-    raise ValueError('Could not connect')
-
-print('HTTP Response:', nice_hex(sock.recv(1024)))
-
-#send_handshake(sock)
-
-
-# send_nick(sock, ''.join(['aeiouy'[random.randint(0, 5)]]*5))
-# send_spectate(sock)
-
-while 1:
-    #print('Before select')
-    r, w, e = select.select([sock], [], [], 500)
-    #print('After select')
-    if r:
-        on_message(sock, sock.recv(1024))
-
+if __name__ == "__main__":
+    # websocket.enableTrace(True)
+    ws = websocket.WebSocketApp(get_url(),
+        on_message=on_message,
+        on_error=on_error,
+        on_close=on_close)
+    ws.on_open = on_open
+    ws.run_forever(origin='http://agar.io')
