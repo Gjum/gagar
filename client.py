@@ -96,17 +96,18 @@ msg_spectate = lambda: struct.pack('!B', 1)
 cell = PlayerCell()
 
 def on_message(ws, buff):
-    print('RECV', nice_hex(buff))
+    # print('RECV', nice_hex(buff))
     s = BufferStruct(buff)
     ident = s.pop_uint8()
-    #print('RECV', ident, s)
-    if 16 == ident:
+    print('RECV', ident, s)
+    if 16 == ident:  # world update?
         # something is eaten?
         n = s.pop_uint16()
+        print('eaten:', n)
         for d in range(n):
             ca = s.pop_uint32()
             cb = s.pop_uint32()
-            print('  ', ca, 'destroys', cb)
+            # print('  ', ca, 'destroys', cb)
             if ca and cb:
                 pass  # b.destroy(); b.xy = a.xy
         # create/update cells
@@ -115,7 +116,7 @@ def on_message(ws, buff):
             cx = s.pop_float64()
             cy = s.pop_float64()
             csize = s.pop_float64()
-            color = s.pop_uint32()  # just skip TODO
+            color = s.pop_uint32()  # just skip TODO parse color
             bitmask = s.pop_uint8()
             is_virus = bool(bitmask & 1)
             skips = 0  # lolwtf
@@ -134,7 +135,7 @@ def on_message(ws, buff):
         print('  Update: xy:', x, y, 'size:', size)
     elif 20 == ident:  # some reset?
         pass
-    elif 32 == ident:  # some hint?
+    elif 32 == ident:  # TODO some hint? latency?
         val32 = s.pop_uint32()
         print('  [32]', val32)
     elif 49 == ident:  # leaderboard
@@ -155,8 +156,10 @@ def on_message(ws, buff):
         x = (c + a) / 2
         y = (d + b) / 2
         print('  abcd:', a, b, c, d, '\n  xy:', x, y)
+    elif ord('H') == ident:
+        print('  Well hello, good sir.')
     else:
-        print('  Unexpected ident')
+        print('  Unexpected ident 0x%02x' % ident)
 
 def on_error(ws, error):
     print('ERROR', error)
