@@ -44,20 +44,20 @@ class BufferStruct:
         return values
 
     def pop_uint8(self):
-        return self.pop_values('!B')[0]
+        return self.pop_values('<B')[0]
 
     def pop_uint16(self):
-        return self.pop_values('!H')[0]
+        return self.pop_values('<H')[0]
 
     def pop_uint32(self):
-        return self.pop_values('!I')[0]
+        return self.pop_values('<I')[0]
 
     def pop_float64(self):
-        return self.pop_values('!d')[0]
+        return self.pop_values('<d')[0]
 
     def pop_str(self):
         l_name = []
-        while 0 < self.peek_uint8():
+        while 0 == self.peek_uint16():
             c = self.pop_uint16()
             l_name.append(chr(c))
         return ''.join(l_name)
@@ -66,10 +66,13 @@ class BufferStruct:
         return struct.unpack_from(fmt, self.buffer, 0)
 
     def peek_uint8(self):
-        return self.peek_values('!B')[0]
+        return self.peek_values('<B')[0]
+
+    def peek_uint16(self):
+        return self.peek_values('<H')[0]
 
     def peek_uint32(self):
-        return self.peek_values('!I')[0]
+        return self.peek_values('<I')[0]
 
 class PlayerCell:
     def __init__(self):
@@ -79,10 +82,10 @@ class PlayerCell:
 
 ####################
 
-msg_handshake = lambda: struct.pack('!BI', 255, 1)
-msg_nick = lambda nick: struct.pack('!B%iH' % len(nick), 0, *map(ord, nick))
-msg_update = lambda x, y: struct.pack('!BddI', 16, x, y, 0)
-msg_spectate = lambda: struct.pack('!B', 1)
+msg_handshake = lambda: struct.pack('<BI', 255, 1)
+msg_nick = lambda nick: struct.pack('<B%iH' % len(nick), 0, *map(ord, nick))
+msg_update = lambda x, y: struct.pack('<BddI', 16, x, y, 0)
+msg_spectate = lambda: struct.pack('<B', 1)
 
 ## special msgs
 # spectate: send uint8 1
