@@ -104,11 +104,7 @@ msg_spectate = lambda: struct.pack('<B', 1)
 
 cell = PlayerCell()
 
-def on_message(ws, buff):
-    # print('RECV', nice_hex(buff))
-    s = BufferStruct(buff)
-    ident = s.pop_uint8()
-    print('RECV', ident, s)
+def parse_message(ident, s):
     if 16 == ident:  # world update?
         # something is eaten?
         n = s.pop_uint16()
@@ -169,6 +165,18 @@ def on_message(ws, buff):
         print('  Well hello, good sir.')
     else:
         print('  Unexpected ident 0x%02x' % ident)
+
+def on_message(ws, buf):
+    s = BufferStruct(buf)
+    ident = s.pop_uint8()
+    print('RECV', ident, s)
+    try:
+        parse_message(ident, s)
+    except BufferUnderflowError as e:
+        print('ERROR parsing ident', ident, 'failed:', e.args[0],
+              nice_hex(buf[-len(s.buffer)-8:]))
+        import sys
+        sys.exit(0)
 
 def on_error(ws, error):
     print('ERROR', error)
