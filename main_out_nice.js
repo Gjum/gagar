@@ -155,23 +155,25 @@
                 var updateCode_ = Math.random(), c = 1;
                 aa = false;
                 // something is eaten?
-                for (var cellId = recv.getUint16(c, true), c = c + 2, d = 0; d < cellId; ++d) {
-                    var f = cellsById[recv.getUint32(c, true)],
-                        g = cellsById[recv.getUint32(c + 4, true)],
-                        c = c + 8;
-                    if (f && g) {
-                        g.destroy();
-                        g.ox = g.x;
-                        g.oy = g.y;
-                        g.oSize = g.size;
-                        g.nx = f.x;
-                        g.ny = f.y;
-                        g.nSize = g.size;
-                        g.updateTime = updateTime_;
+                var num = recv.getUint16(c, true);
+                c = c + 2;
+                for (var i = 0; i < num; ++i) {
+                    var ca = cellsById[recv.getUint32(c, true)],
+                        cb = cellsById[recv.getUint32(c + 4, true)];
+                    c += 8;
+                    if (ca && cb) {
+                        cb.destroy();
+                        cb.ox = cb.x;
+                        cb.oy = cb.y;
+                        cb.oSize = cb.size;
+                        cb.nx = ca.x;
+                        cb.ny = ca.y;
+                        cb.nSize = cb.size;
+                        cb.updateTime = updateTime_;
                     }
                 }
                 for (; ;) {
-                    cellId = recv.getUint32(c, true);
+                    var cellId = recv.getUint32(c, true);
                     c += 4;
                     if (0 == cellId)
                         break;
@@ -226,8 +228,11 @@
                 c += 2;
                 f = recv.getUint32(c, true);
                 c += 4;
-                for (d = 0; d < f; d++)
-                    cellId = recv.getUint32(c, true), c += 4, cellsById[cellId] && (cellsById[cellId].updateCode = updateCode_);
+                for (d = 0; d < f; d++) {
+                    cellId = recv.getUint32(c, true);
+                    c += 4;
+                    cellsById[cellId] && (cellsById[cellId].updateCode = updateCode_);
+                }
                 for (d = 0; d < p.length; d++)
                     p[d].updateCode != updateCode_ && p[d--].destroy();
                 aa && 0 == m.length && jQuery("#overlays").fadeIn(3E3);
