@@ -27,6 +27,13 @@ def nice_hex(buffer):
             nice_bytes.append('%02x' % b)
     return ''.join(nice_bytes)
 
+class BufferUnderflowError(struct.error):
+    def __init__(self, fmt, buf):
+        self.fmt = fmt
+        self.buf = buf
+        self.args = ('Buffer too short: wanted %i %s, got %i %s'
+                     % (struct.calcsize(fmt), fmt, len(buf), buf),)
+
 class BufferStruct:
     def __init__(self, message):
         self.buffer = message
@@ -37,8 +44,7 @@ class BufferStruct:
     def pop_values(self, fmt):
         size = struct.calcsize(fmt)
         if len(self.buffer) < size:
-            raise ValueError('Buffer too short: wanted %i %s, got %i %s'
-                             % (size, fmt, len(self.buffer), self.buffer))
+            raise BufferUnderflowError(fmt, self.buffer)
         values = struct.unpack_from(fmt, self.buffer, 0)
         self.buffer = self.buffer[size:]
         return values
