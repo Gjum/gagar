@@ -66,7 +66,7 @@ class BufferStruct:
 
     def pop_str(self):
         l_name = []
-        while 0 == self.peek_uint16():
+        while 0 != self.peek_uint16():
             c = self.pop_uint16()
             l_name.append(chr(c))
         return ''.join(l_name)
@@ -107,7 +107,9 @@ msg_spectate = lambda: struct.pack('<B', 1)
 
 cell = PlayerCell()
 
-def parse_message(ident, s):
+def parse_message(buf):
+    s = BufferStruct(buf)
+    ident = s.pop_uint8()
     if 16 == ident:  # world update?
         # something is eaten?
         n = s.pop_uint16()
@@ -119,7 +121,7 @@ def parse_message(ident, s):
             if ca and cb:
                 pass  # b.destroy(); b.xy = a.xy
         # create/update cells
-        while s.peek_uint32() > 0:
+        while 0 != s.peek_uint32():
             cid = s.pop_uint32()
             cx = s.pop_float32()
             cy = s.pop_float32()
@@ -134,8 +136,8 @@ def parse_message(ident, s):
             for i in range(skips): s.pop_uint8()
             cname = s.pop_str()
             print('  Virus' if is_virus else '  Cell ',
-                  cid, cname, 'at', cx, cy,
-                  'size:', csize, 'color: #%06x' % color)
+                  cid, cname, 'at %.2f %.2f' % (cx, cy),
+                  'size: %.2f' % csize, 'color: #%06x' % color)
     elif 17 == ident:  # pos/size update?
         cell.x = x = s.pop_float32()
         cell.y = y = s.pop_float32()
@@ -155,7 +157,7 @@ def parse_message(ident, s):
             leaderboard.append((l_id, l_name))
         print('  Leaderboard:')
         for l_id, l_name in leaderboard:
-            print('    ', l_id, l_name)
+            print('    ', '%11i' % l_id, l_name)
     elif 50 == ident:
         print('ident 50')
         import sys
@@ -174,14 +176,13 @@ def parse_message(ident, s):
         print('  Unexpected ident 0x%02x' % ident)
 
 def on_message(ws, buf):
-    s = BufferStruct(buf)
-    ident = s.pop_uint8()
-    print('RECV', ident, s)
+    ident = buf[0]
+    print('RECV', ident, nice_hex(buf))
     try:
-        parse_message(ident, s)
+        parse_message(buf)
     except BufferUnderflowError as e:
         print('ERROR parsing ident', ident, 'failed:', e.args[0],
-              nice_hex(buf[-len(s.buffer)-8:]))
+              nice_hex(buf))
         import sys
         sys.exit(0)
 
