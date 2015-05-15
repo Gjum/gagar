@@ -58,6 +58,9 @@ class BufferStruct:
     def pop_uint32(self):
         return self.pop_values('<I')[0]
 
+    def pop_float32(self):
+        return self.pop_values('<f')[0]
+
     def pop_float64(self):
         return self.pop_values('<d')[0]
 
@@ -118,9 +121,9 @@ def parse_message(ident, s):
         # create/update cells
         while s.peek_uint32() > 0:
             cid = s.pop_uint32()
-            cx = s.pop_float64()
-            cy = s.pop_float64()
-            csize = s.pop_float64()
+            cx = s.pop_float32()
+            cy = s.pop_float32()
+            csize = s.pop_float32()
             color = s.pop_uint32()  # just skip TODO parse color
             bitmask = s.pop_uint8()
             is_virus = bool(bitmask & 1)
@@ -134,9 +137,9 @@ def parse_message(ident, s):
                   cid, cname, 'at', cx, cy,
                   'size:', csize, 'color: #%06x' % color)
     elif 17 == ident:  # pos/size update?
-        cell.x = x = s.pop_float64()
-        cell.y = y = s.pop_float64()
-        cell.size = size = s.pop_float64()
+        cell.x = x = s.pop_float32()
+        cell.y = y = s.pop_float32()
+        cell.size = size = s.pop_float32()
         print('  Update: xy:', x, y, 'size:', size)
     elif 20 == ident:  # some reset?
         pass
@@ -153,6 +156,10 @@ def parse_message(ident, s):
         print('  Leaderboard:')
         for l_id, l_name in leaderboard:
             print('    ', l_id, l_name)
+    elif 50 == ident:
+        print('ident 50')
+        import sys
+        sys.exit()
     elif 64 == ident:
         a = s.pop_float64()
         b = s.pop_float64()
