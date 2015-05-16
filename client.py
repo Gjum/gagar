@@ -53,20 +53,22 @@ class AgarClient:
         self.ws = None
         self.handlers = defaultdict(list)
         self.crash_on_errors = False
-
-        self.last_err = None
+        self.connected = False
+        self.last_err = None  # TODO check if crashing iff True
 
     def add_handler(self, ident, handler):
         self.handlers[ident].append(handler)
 
     def handle(self, ident, **data):
+        if not self.connected:
+            return
         for handler in self.handlers[ident]:
             # noinspection PyBroadException
             try:
                 handler(**data)
             except Exception:
                 if self.crash_on_errors:
-                    print('Handler failed on ident', ident, data)
+                    print('Handler failed on ident', ident, data, file=stderr)
                     raise
 
     def connect(self, url):
@@ -75,10 +77,16 @@ class AgarClient:
              on_close=lambda _: self.handle('close'),
              on_error=lambda _, e: self.handle('error', error=e),
              on_message=self.on_message)
+        self.connected = True
         self.ws.run_forever(origin='http://agar.io')
+        self.connected = False
         self.ws = None
         if self.last_err:
             raise self.last_err
+
+    def disconnect(self):
+        self.ws.keep_running = False
+        self.connected = False
 
     def on_message(self, _, msg):
         ident = msg[0]
@@ -89,8 +97,10 @@ class AgarClient:
             print('ERROR parsing ident', ident, 'failed:',
                   e.args[0], nice_hex(msg), file=stderr)
         except Exception as e:
-            self.last_err = e
-            self.ws.keep_running = False
+            if self.crash_on_errors:
+                self.last_err = e
+                self.disconnect()
+                raise
 
     def parse_message(self, msg):
         s = BufferStruct(msg)
