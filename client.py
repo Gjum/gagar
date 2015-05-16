@@ -102,17 +102,9 @@ class AgarClient:
             # something is eaten?
             n = s.pop_uint16()
             for i in range(n):
-                try:
-                    ca = s.pop_uint32()
-                    cb = s.pop_uint32()
-                except BufferUnderflowError as e:
-                    print('ERROR parsing eaten failed at #%i:' % i, e.args)
-                    return
-                    # print('  ', ca, 'destroys', cb)
-                else:
-                    if ca and cb:
-                        pass  # b.destroy(); b.xy = a.xy
-                    self.handle('cell_eaten', a=ca, b=cb)
+                ca = s.pop_uint32()
+                cb = s.pop_uint32()
+                self.handle('cell_eaten', a=ca, b=cb)
 
             # create/update cells
             while 1:
