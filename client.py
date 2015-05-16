@@ -88,6 +88,8 @@ class PlayerCell:
         self.x = 0
         self.y = 0
         self.size = 0
+        self.name = ''
+        self.virus = False
 
 ####################
 
@@ -111,6 +113,8 @@ def parse_message(buf):
     s = BufferStruct(buf)
     ident = s.pop_uint8()
     if 16 == ident:  # world update?
+        # sent very often, probably every "tick"
+
         # something is eaten?
         n = s.pop_uint16()
         print('eaten:', n)
@@ -129,6 +133,7 @@ def parse_message(buf):
             color = s.pop_uint32()  # just skip TODO parse color
             bitmask = s.pop_uint8()
             is_virus = bool(bitmask & 1)
+            is_agitated = bool(bitmask & 16)
             skips = 0  # lolwtf
             if bitmask & 2: skips += 4
             if bitmask & 4: skips += 8
@@ -137,41 +142,77 @@ def parse_message(buf):
             cname = s.pop_str()
             print('  Virus' if is_virus else '  Cell ',
                   cid, cname, 'at %.2f %.2f' % (cx, cy),
-                  'size: %.2f' % csize, 'color: #%06x' % color)
-    elif 17 == ident:  # pos/size update?
-        cell.x = x = s.pop_float32()
-        cell.y = y = s.pop_float32()
-        cell.size = size = s.pop_float32()
-        print('  Update: xy:', x, y, 'size:', size)
-    elif 20 == ident:  # some reset?
-        pass
-    elif 32 == ident:  # TODO some hint? latency?
-        val32 = s.pop_uint32()
-        print('  [32]', val32)
-    elif 49 == ident:  # leaderboard
+                  'size: %.2f' % csize, 'color: #%06x' % color,
+                  'agitated' if is_agitated else '')
+
+        # keep only the following cells
+        s.pop_uint16()  # 2 byte just skipped? lol
+        keep = []
         n = s.pop_uint32()
-        leaderboard = []
+        for e in range(n):
+            keep.append(s.pop_uint32())
+        # sort out other cells
+
+    elif 49 == ident:  # leaderboard of names
+        # sent every 500ms
+        # only in free for all mode
+        n = s.pop_uint32()
+        leaderboard_names = []
         for i in range(n):
             l_id = s.pop_uint32()
             l_name = s.pop_str()
-            leaderboard.append((l_id, l_name))
+            leaderboard_names.append((l_id, l_name))
         print('  Leaderboard:')
-        for l_id, l_name in leaderboard:
+        for l_id, l_name in leaderboard_names:
             print('    ', '%11i' % l_id, l_name)
-    elif 50 == ident:
-        print('ident 50')
-        import sys
-        sys.exit()
-    elif 64 == ident:
+
+    elif 50 == ident:  # leaderboard of groups
+        # sent every 500ms
+        # only in group mode
+        n = s.pop_uint32()
+        leaderboard_angles = []
+        for i in range(n):
+            angle = s.pop_float32()
+            leaderboard_angles.append(angle)
+        import sys;sys.exit()
+
+    elif 32 == ident:  # new own ID?
+        # not sent in passive mode
+        # first on respawn
+        # B.push(d.getUint32(1, !0));
+        val32 = s.pop_uint32()
+        print('  New ID:', val32)
+        import sys;sys.exit()
+
+    elif 17 == ident:  # pos/size update? "moved wrongly"?
+        # not sent in passive mode
+        # not sent in active mode?
+        cell.x = x = s.pop_float32()
+        cell.y = y = s.pop_float32()
+        cell.size = size = s.pop_float32()
+        print('  Moved wrongly: xy:', x, y, 'size:', size)
+        import sys;sys.exit()
+
+    elif 20 == ident:  # reset cell?
+        # not sent in passive mode
+        # sent on death?
+        # g = []; B = [];
+        print('  [20]')
+
+    elif 64 == ident:  # info about updated area?
+        # sent on connection
+        # sent on server change
         a = s.pop_float64()
         b = s.pop_float64()
         c = s.pop_float64()
         d = s.pop_float64()
-        x = (c + a) / 2
+        x = (c + a) / 2  # move shown area to center?
         y = (d + b) / 2
-        print('  abcd:', a, b, c, d, '\n  xy:', x, y)
-    elif ord('H') == ident:
-        print('  Well hello, good sir.')
+        print('  ab:', a, b, '\n  cd:', c, d, '\n  xy:', x, y)
+
+    elif ord('H') == ident:  # "Hello Hello Hello"
+        pass  # print('  Well hello, good sir.')
+
     else:
         print('  Unexpected ident 0x%02x' % ident)
 
@@ -183,8 +224,7 @@ def on_message(ws, buf):
     except BufferUnderflowError as e:
         print('ERROR parsing ident', ident, 'failed:', e.args[0],
               nice_hex(buf))
-        import sys
-        sys.exit(0)
+        import sys;sys.exit()
 
 def on_error(ws, error):
     print('ERROR', error)
