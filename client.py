@@ -1,31 +1,7 @@
+from collections import defaultdict
 import struct
+from sys import stderr
 import websocket
-
-def nice_hex(buffer):
-    specials = {
-        '\r': '\\r',
-        '\n': '\\n',
-        ' ': '␣',
-        }
-    nice_bytes = []
-    hex_seen = False
-    for b in buffer:
-        if 33 <= int(b) <= 126:  # printable
-            if hex_seen:
-                nice_bytes.append(' ')
-                hex_seen = False
-            nice_bytes.append('%c' % b)
-        elif chr(b) in specials:
-            if hex_seen:
-                nice_bytes.append(' ')
-                hex_seen = False
-            nice_bytes.append(specials[chr(b)])
-        else:
-            if not hex_seen:
-                nice_bytes.append(' 0x')
-                hex_seen = True
-            nice_bytes.append('%02x' % b)
-    return ''.join(nice_bytes)
 
 class BufferUnderflowError(struct.error):
     def __init__(self, fmt, buf):
@@ -66,37 +42,185 @@ class BufferStruct:
 
     def pop_str(self):
         l_name = []
-        while 0 != self.peek_uint16():
+        while 1:
             c = self.pop_uint16()
+            if c == 0: break
             l_name.append(chr(c))
         return ''.join(l_name)
 
-    def peek_values(self, fmt):
-        return struct.unpack_from(fmt, self.buffer, 0)
-
-    def peek_uint8(self):
-        return self.peek_values('<B')[0]
-
-    def peek_uint16(self):
-        return self.peek_values('<H')[0]
-
-    def peek_uint32(self):
-        return self.peek_values('<I')[0]
-
-class PlayerCell:
+class AgarClient:
     def __init__(self):
-        self.x = 0
-        self.y = 0
-        self.size = 0
-        self.name = ''
-        self.virus = False
+        self.ws = None
+        self.handlers = defaultdict(list)
+        self.crash_on_errors = False
 
-####################
+        self.last_err = None
 
-msg_handshake = lambda: struct.pack('<BI', 255, 1)
-msg_nick = lambda nick: struct.pack('<B%iH' % len(nick), 0, *map(ord, nick))
-msg_update = lambda x, y: struct.pack('<BddI', 16, x, y, 0)
-msg_spectate = lambda: struct.pack('<B', 1)
+    def add_handler(self, ident, handler):
+        self.handlers[ident].append(handler)
+
+    def handle(self, ident, **data):
+        for handler in self.handlers[ident]:
+            # noinspection PyBroadException
+            try:
+                handler(**data)
+            except Exception:
+                if self.crash_on_errors:
+                    print('Handler failed on ident', ident, data)
+                    raise
+
+    def connect(self, url):
+        self.ws = websocket.WebSocketApp(url,
+             on_open=lambda _: self.handle('open'),
+             on_close=lambda _: self.handle('close'),
+             on_error=lambda _, e: self.handle('error', error=e),
+             on_message=self.on_message)
+        self.ws.run_forever(origin='http://agar.io')
+        self.ws = None
+        if self.last_err:
+            raise self.last_err
+
+    def on_message(self, _, msg):
+        ident = msg[0]
+        self.handle('raw_%02i' % ident, raw=msg)
+        try:
+            self.parse_message(msg)
+        except BufferUnderflowError as e:
+            print('ERROR parsing ident', ident, 'failed:',
+                  e.args[0], nice_hex(msg), file=stderr)
+        except Exception as e:
+            self.last_err = e
+            self.ws.keep_running = False
+
+    def parse_message(self, msg):
+        s = BufferStruct(msg)
+        ident = s.pop_uint8()
+
+        if 16 == ident:  # world update?
+            # sent very often, probably every "tick"
+
+            # something is eaten?
+            n = s.pop_uint16()
+            for i in range(n):
+                try:
+                    ca = s.pop_uint32()
+                    cb = s.pop_uint32()
+                except BufferUnderflowError as e:
+                    print('ERROR parsing eaten failed at #%i:' % i, e.args)
+                    return
+                    # print('  ', ca, 'destroys', cb)
+                else:
+                    if ca and cb:
+                        pass  # b.destroy(); b.xy = a.xy
+                    self.handle('cell_eaten', a=ca, b=cb)
+
+            # create/update cells
+            while 1:
+                cid = s.pop_uint32()
+                if cid == 0: break
+                cx = s.pop_float32()
+                cy = s.pop_float32()
+                csize = s.pop_float32()
+                color = (s.pop_uint8(), s.pop_uint8(), s.pop_uint8())
+                bitmask = s.pop_uint8()
+                is_virus = bool(bitmask & 1)
+                is_agitated = bool(bitmask & 16)
+                skips = 0  # lolwtf
+                if bitmask & 2: skips += 4
+                if bitmask & 4: skips += 8
+                if bitmask & 8: skips += 16
+                for i in range(skips): s.pop_uint8()
+                cname = s.pop_str()
+                self.handle('cell_info', cid=cid, x=cx, y=cy,
+                            size=csize, name=cname, color=color,
+                            is_virus=is_virus, is_agitated=is_agitated)
+
+            # keep only the following cells
+            s.pop_uint16()  # 2 byte just skipped? lol
+            keep_cells = []
+            n = s.pop_uint32()
+            for e in range(n):
+                keep_cells.append(s.pop_uint32())
+            # sort out other cells
+            self.handle('cell_keep', keep_cells=keep_cells)
+
+        elif 49 == ident:  # leaderboard of names
+            # sent every 500ms
+            # only in free for all mode
+            n = s.pop_uint32()
+            leaderboard = []
+            for i in range(n):
+                l_id = s.pop_uint32()
+                l_name = s.pop_str()
+                leaderboard.append((l_id, l_name))
+            self.handle('leaderboard_names', leaderboard=leaderboard)
+
+        elif 50 == ident:  # leaderboard of groups
+            # sent every 500ms
+            # only in group mode
+            n = s.pop_uint32()
+            angles = []
+            for i in range(n):
+                angle = s.pop_float32()
+                angles.append(angle)
+            self.handle('leaderboard_angles', angles=angles)
+
+        elif 32 == ident:  # new own ID?
+            # not sent in passive mode
+            # first on respawn
+            # B.push(d.getUint32(1, !0));
+            cid = s.pop_uint32()
+            self.handle('new_id', cid=cid)
+            print('New ID', cid)
+            import sys;sys.exit()
+
+        elif 17 == ident:  # pos/size update? "moved wrongly"?
+            # not sent in passive mode
+            # not sent in active mode?
+            cx = s.pop_float32()
+            cy = s.pop_float32()
+            size = s.pop_float32()
+            self.handle('moved_wrongly', x=cx, y=cy, size=size)
+            print('Moved wrongly: xy:', cx, cy, 'size:', size)
+            import sys;sys.exit()
+
+        elif 20 == ident:  # reset cell?
+            # not sent in passive mode
+            # sent on death?
+            # g = []; B = [];
+            print('[20] reset cell?')  # TODO
+
+        elif 64 == ident:  # info about updated area?
+            # sent on connection
+            # sent on server change
+            left = s.pop_float64()
+            top = s.pop_float64()
+            right = s.pop_float64()
+            bottom = s.pop_float64()
+            self.handle('area', left=left, top=top, right=right, bottom=bottom)
+
+        elif ord('H') == ident:  # "HelloHelloHello"
+            self.handle('hello')
+
+        else:
+            print('  Unexpected ident 0x%02x' % ident, file=stderr)
+
+    def send_struct(self, fmt, *data):
+        if not self.ws:
+            raise ValueError('Not connected to server')
+        self.ws.send(struct.pack(fmt, *data))
+
+    def send_handshake(self):
+        self.send_struct('<BI', 255, 1)
+
+    def send_nick(self, nick):
+        self.send_struct('<B%iH' % len(nick), 0, *map(ord, nick))
+
+    def send_update(self, x, y):
+        self.send_struct('<BddI', 16, x, y, 0)
+
+    def send_spectate(self):
+        self.send_struct('<B', 1)
 
 ## special msgs
 # spectate: send uint8 1
@@ -107,157 +231,117 @@ msg_spectate = lambda: struct.pack('<B', 1)
 
 ####################
 
-cell = PlayerCell()
+specials = {
+    '\r': '\\r',
+    '\n': '\\n',
+    ' ': '␣',
+}
 
-def parse_message(buf):
-    s = BufferStruct(buf)
-    ident = s.pop_uint8()
-    if 16 == ident:  # world update?
-        # sent very often, probably every "tick"
+def nice_hex(buffer):
+    nice_bytes = []
+    hex_seen = False
+    for b in buffer:
+        if chr(b) in specials:
+            if hex_seen:
+                nice_bytes.append(' ')
+                hex_seen = False
+            nice_bytes.append(specials[chr(b)])
+        elif 33 <= int(b) <= 126:  # printable
+            if hex_seen:
+                nice_bytes.append(' ')
+                hex_seen = False
+            nice_bytes.append('%c' % b)
+        else:
+            if not hex_seen:
+                nice_bytes.append(' 0x')
+                hex_seen = True
+            nice_bytes.append('%02x' % b)
+    return ''.join(nice_bytes)
 
-        # something is eaten?
-        n = s.pop_uint16()
-        print('eaten:', n)
-        for d in range(n):
-            ca = s.pop_uint32()
-            cb = s.pop_uint32()
-            # print('  ', ca, 'destroys', cb)
-            if ca and cb:
-                pass  # b.destroy(); b.xy = a.xy
-        # create/update cells
-        while 0 != s.peek_uint32():
-            cid = s.pop_uint32()
-            cx = s.pop_float32()
-            cy = s.pop_float32()
-            csize = s.pop_float32()
-            color = s.pop_uint32()  # just skip TODO parse color
-            bitmask = s.pop_uint8()
-            is_virus = bool(bitmask & 1)
-            is_agitated = bool(bitmask & 16)
-            skips = 0  # lolwtf
-            if bitmask & 2: skips += 4
-            if bitmask & 4: skips += 8
-            if bitmask & 8: skips += 16
-            for i in range(skips): s.pop_uint8()
-            cname = s.pop_str()
-            print('  Virus' if is_virus else '  Cell ',
-                  cid, cname, 'at %.2f %.2f' % (cx, cy),
-                  'size: %.2f' % csize, 'color: #%06x' % color,
-                  'agitated' if is_agitated else '')
+def nice_hex_block(buffer, width=32):
+    lines = []
+    for lineno in range(len(buffer) // width + 1):  # should stop at break below
+        nice_bytes = []
+        for b in buffer[:width]:
+            if chr(b) in specials:
+                nice_bytes.append('%2s' % specials[chr(b)])
+            elif 33 <= int(b) <= 126:  # printable
+                nice_bytes.append(' %c' % b)
+            elif b == 0:
+                nice_bytes.append(' .')
+            else:
+                nice_bytes.append(' ~')
 
-        # keep only the following cells
-        s.pop_uint16()  # 2 byte just skipped? lol
-        keep = []
-        n = s.pop_uint32()
-        for e in range(n):
-            keep.append(s.pop_uint32())
-        # sort out other cells
+        line = '%04i %-*s\n     %-*s' % (
+            lineno * width,
+            3 * width,
+            ' '.join('%02x' % b for b in buffer[:width]),
+            3 * width,
+            ' '.join(nice_bytes),
+        )
+        lines.append(line)
+        buffer = buffer[width:]
+        if len(buffer) <= 0:
+            break
+    return '\n'.join(lines)
 
-    elif 49 == ident:  # leaderboard of names
-        # sent every 500ms
-        # only in free for all mode
-        n = s.pop_uint32()
-        leaderboard_names = []
-        for i in range(n):
-            l_id = s.pop_uint32()
-            l_name = s.pop_str()
-            leaderboard_names.append((l_id, l_name))
-        print('  Leaderboard:')
-        for l_id, l_name in leaderboard_names:
-            print('    ', '%11i' % l_id, l_name)
-
-    elif 50 == ident:  # leaderboard of groups
-        # sent every 500ms
-        # only in group mode
-        n = s.pop_uint32()
-        leaderboard_angles = []
-        for i in range(n):
-            angle = s.pop_float32()
-            leaderboard_angles.append(angle)
-        import sys;sys.exit()
-
-    elif 32 == ident:  # new own ID?
-        # not sent in passive mode
-        # first on respawn
-        # B.push(d.getUint32(1, !0));
-        val32 = s.pop_uint32()
-        print('  New ID:', val32)
-        import sys;sys.exit()
-
-    elif 17 == ident:  # pos/size update? "moved wrongly"?
-        # not sent in passive mode
-        # not sent in active mode?
-        cell.x = x = s.pop_float32()
-        cell.y = y = s.pop_float32()
-        cell.size = size = s.pop_float32()
-        print('  Moved wrongly: xy:', x, y, 'size:', size)
-        import sys;sys.exit()
-
-    elif 20 == ident:  # reset cell?
-        # not sent in passive mode
-        # sent on death?
-        # g = []; B = [];
-        print('  [20]')
-
-    elif 64 == ident:  # info about updated area?
-        # sent on connection
-        # sent on server change
-        a = s.pop_float64()
-        b = s.pop_float64()
-        c = s.pop_float64()
-        d = s.pop_float64()
-        x = (c + a) / 2  # move shown area to center?
-        y = (d + b) / 2
-        print('  ab:', a, b, '\n  cd:', c, d, '\n  xy:', x, y)
-
-    elif ord('H') == ident:  # "Hello Hello Hello"
-        pass  # print('  Well hello, good sir.')
-
-    else:
-        print('  Unexpected ident 0x%02x' % ident)
-
-def on_message(ws, buf):
-    ident = buf[0]
-    print('RECV', ident, nice_hex(buf))
-    try:
-        parse_message(buf)
-    except BufferUnderflowError as e:
-        print('ERROR parsing ident', ident, 'failed:', e.args[0],
-              nice_hex(buf))
-        import sys;sys.exit()
-
-def on_error(ws, error):
-    print('ERROR', error)
-
-def on_close(ws):
-    print('CLOSED')
-
-def on_open(ws):
-    ws.send(msg_handshake())
-    # import random
-    # nick = ''.join(random.choice('aeiouy') for i in range(random.randint(4,8)))
-    # print('Nick:', nick)
-    # ws.send(msg_nick(nick))
-    # ws.send(msg_spectate())
+def find_strings(buffer):
+    # TODO split at 0x0000, go backwards from there, keep Little Endianness in mind
+    string = []
+    find0 = True
+    for i, b in enumerate(buffer):
+        if find0 and b == 0:
+            find0 = False
+        elif not find0 and 32 <= int(b) <= 126:
+            string.append(chr(b))
+            find0 = True
+        else:
+            string = ''.join(string)
+            if len(string) > 2:
+                yield string
+            string = []
+            find0 = True
 
 ####################
 
-def get_url():
+def print_cell_info(cid, x, y, size, name, color, is_virus, is_agitated):
+    print('Virus' if is_virus else 'Cell ',
+          '%8i' % cid, 'at %.2f %.2f' % (x, y),
+          'size: %.2f' % size, 'color: #%02x%02x%02x' % color,
+          '"%s"' % name, 'agitated' if is_agitated else '')
+
+def print_leaderboard_names(leaderboard):
+    print('Leaderboard:')
+    for l_id, l_name in leaderboard:
+        print('  %11i' % l_id, l_name)
+
+def print_leaderboard_angles(angles):
+    print('Leaderboard: angles', angles)
+
+####################
+
+def get_url(region='EU-London'):
     import urllib.request
-    addr = urllib.request.urlopen('http://m.agar.io')\
+    addr = urllib.request.urlopen('http://m.agar.io', data=region.encode())\
             .read().decode().split('\n')[0]
     return 'ws://%s' % addr
 
 def main():
+    client = AgarClient()
+    client.crash_on_errors = True
+    client.add_handler('open', lambda **data: client.send_handshake())
+    client.add_handler('cell_info', print_cell_info)
+    client.add_handler('leaderboard_names', print_leaderboard_names)
+    client.add_handler('leaderboard_angles', print_leaderboard_angles)
+
     # websocket.enableTrace(True)
     url = get_url()
     print('Got url', url)
-    ws = websocket.WebSocketApp(url,
-        on_open=on_open,
-        on_message=on_message,
-        on_error=on_error,
-        on_close=on_close)
-    ws.run_forever(origin='http://agar.io')
+    try:
+        client.connect(url)
+    except KeyboardInterrupt:
+        print('KeyboardInterrupt')
+    print('Done')
 
 if __name__ == "__main__":
     main()
