@@ -235,7 +235,7 @@ def on_close(ws):
 def on_open(ws):
     ws.send(msg_handshake())
     # import random
-    # nick = ''.join(['aeiouy'[random.randint(0, 5)]]*5)
+    # nick = ''.join(random.choice('aeiouy') for i in range(random.randint(4,8)))
     # print('Nick:', nick)
     # ws.send(msg_nick(nick))
     # ws.send(msg_spectate())
@@ -246,16 +246,18 @@ def get_url():
     import urllib.request
     addr = urllib.request.urlopen('http://m.agar.io')\
             .read().decode().split('\n')[0]
-    #addr = '213.219.37.141:443'
-    url = 'ws://%s' % addr
-    print('Got url', url)
-    return url
+    return 'ws://%s' % addr
 
-if __name__ == "__main__":
+def main():
     # websocket.enableTrace(True)
-    ws = websocket.WebSocketApp(get_url(),
+    url = get_url()
+    print('Got url', url)
+    ws = websocket.WebSocketApp(url,
+        on_open=on_open,
         on_message=on_message,
         on_error=on_error,
         on_close=on_close)
-    ws.on_open = on_open
     ws.run_forever(origin='http://agar.io')
+
+if __name__ == "__main__":
+    main()
