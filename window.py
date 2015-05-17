@@ -1,6 +1,6 @@
 from collections import defaultdict
 # noinspection PyUnresolvedReferences
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gdk
 from client import AgarClient, get_url
 
 TWOPI = 6.28
@@ -167,6 +167,9 @@ class AgarGame(AgarClient):
         for cid, cell in self.cells.items():
             cell.tick()
 
+    def mouse_moved(self, x, y):
+        self.log_msg('Mouse %i %i' % (x, y))
+
     def render(self, widget, c):
         c.set_source_rgba(*BG_COLOR)
         c.paint()
@@ -220,6 +223,9 @@ class AgarWindow(Gtk.Window):
 
         da=Gtk.DrawingArea()
         da.connect('draw', game.render)
+        da.connect('motion-notify-event', lambda _, evt:
+                           game.mouse_moved(evt.x, evt.y))
+        da.set_events(Gdk.EventMask.POINTER_MOTION_MASK)
         self.add(da)
 
         GLib.timeout_add(50, lambda: da.queue_draw() or True)
