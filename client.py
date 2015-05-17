@@ -73,16 +73,26 @@ class AgarClient:
                     raise
 
     def connect(self, url):
+        self.open_socket(url)
+        self.run_forever()
+        self.on_close()
+
+    def open_socket(self, url):
         self.ws = websocket.WebSocket()
         self.ws.connect(url, origin='http://agar.io')
         self.connected = True
         self.handle('open')
+        return self.ws
+
+    def run_forever(self):
         while 1:
             r, w, e = select.select((self.ws.sock, ), (), ())
             if r:
                 self.on_message(self.ws.recv())
             elif e:
                 self.handle('error', error=e)
+
+    def on_close(self):
         self.handle('close')
         self.connected = False
         self.ws = None
@@ -336,7 +346,7 @@ def get_url(region='EU-London'):
 def main():
     client = AgarClient()
     client.crash_on_errors = True
-    client.add_handler('open', lambda **data: client.send_handshake())
+    client.add_handler('hello', lambda **data: client.send_handshake())
     client.add_handler('cell_info', print_cell_info)
     client.add_handler('leaderboard_names', print_leaderboard_names)
     client.add_handler('leaderboard_angles', print_leaderboard_angles)
