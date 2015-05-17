@@ -1,6 +1,7 @@
 from collections import defaultdict
 import struct
 from sys import stderr
+import select
 import websocket
 
 class BufferUnderflowError(struct.error):
@@ -72,13 +73,17 @@ class AgarClient:
                     raise
 
     def connect(self, url):
-        self.ws = websocket.WebSocketApp(url,
-             on_open=lambda _: self.handle('open'),
-             on_close=lambda _: self.handle('close'),
-             on_error=lambda _, e: self.handle('error', error=e),
-             on_message=self.on_message)
+        self.ws = websocket.WebSocket()
+        self.ws.connect(url, origin='http://agar.io')
         self.connected = True
-        self.ws.run_forever(origin='http://agar.io')
+        self.handle('open')
+        while 1:
+            r, w, e = select.select((self.ws.sock, ), (), ())
+            if r:
+                self.on_message(self.ws.recv())
+            elif e:
+                self.handle('error', error=e)
+        self.handle('close')
         self.connected = False
         self.ws = None
         if self.last_err:
@@ -88,7 +93,7 @@ class AgarClient:
         self.ws.keep_running = False
         self.connected = False
 
-    def on_message(self, _, msg):
+    def on_message(self, msg):
         ident = msg[0]
         self.handle('raw_%02i' % ident, raw=msg)
         try:
