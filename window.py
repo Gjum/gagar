@@ -84,8 +84,8 @@ class Cell:
         self.alpha = .8
 
     def tick(self):
-        if self.name:
-            self.alpha *= .9
+        if self.name or self.is_agitated:
+            self.alpha *= .8
 
     @property
     def pos(self):
@@ -97,12 +97,13 @@ class Cell:
         self.x, self.y = pos_or_x
 
     def draw(self, c, scale, view_center, screen_center):
+        if self.alpha < .05:
+            return
         x, y = scale_pos(self.pos, scale, view_center, screen_center)
         c.set_source_rgba(*to_rgba(self.color, self.alpha))
         c.arc(x, y, self.size * scale, 0, TWOPI)
         c.fill()
-        if self.alpha > .01:
-            draw_text_center(c, (x, y), self.name)
+        draw_text_center(c, (x, y), self.name)
 
 # noinspection PyAttributeOutsideInit
 class AgarGame(AgarClient):
