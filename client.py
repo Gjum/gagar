@@ -188,8 +188,6 @@ class AgarClient:
             # B.push(d.getUint32(1, !0));
             cid = s.pop_uint32()
             self.handle('new_id', cid=cid)
-            print('New ID', cid)
-            import sys;sys.exit()
 
         elif 17 == ident:  # pos/size update? "moved wrongly"?
             # not sent in passive mode
@@ -198,14 +196,12 @@ class AgarClient:
             cy = s.pop_float32()
             size = s.pop_float32()
             self.handle('moved_wrongly', x=cx, y=cy, size=size)
-            print('Moved wrongly: xy:', cx, cy, 'size:', size)
-            import sys;sys.exit()
 
         elif 20 == ident:  # reset cell?
             # not sent in passive mode
             # sent on death?
             # g = []; B = [];
-            print('[20] reset cell?')  # TODO
+            self.handle('20')
 
         elif 64 == ident:  # info about updated area?
             # sent on connection
@@ -217,6 +213,7 @@ class AgarClient:
             self.handle('area', left=left, top=top, right=right, bottom=bottom)
 
         elif ord('H') == ident:  # "HelloHelloHello"
+            # sent after initial connection setup
             self.handle('hello')
 
         else:

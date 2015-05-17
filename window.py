@@ -54,7 +54,6 @@ def draw_text_left(c, pos, text,
     c.set_source_rgba(*color)
     c.show_text(text)
 
-# noinspection PyAttributeOutsideInit
 class Cell:
     def __init__(self, cid=-1, x=-1, y=-1, size=10, name='',
                color=BLACK, is_virus=False, is_agitated=False):
@@ -105,17 +104,16 @@ class Cell:
         c.fill()
         draw_text_center(c, (x, y), self.name)
 
-# noinspection PyAttributeOutsideInit
 class AgarGame(AgarClient):
 
     def __init__(self, url):
         AgarClient.__init__(self)
         self.crash_on_errors = True
-        self.add_handler('hello', lambda **data: self.send_handshake())
-        self.add_handler('leaderboard_names', self.leaderboard_names)
-        self.add_handler('cell_eaten', self.cell_eaten)
-        self.add_handler('cell_info', self.cell_info)
-        self.add_handler('cell_keep', self.cell_keep)
+        self.add_handler('hello', self.on_hello)
+        self.add_handler('leaderboard_names', self.on_leaderboard_names)
+        self.add_handler('cell_eaten', self.on_cell_eaten)
+        self.add_handler('cell_info', self.on_cell_info)
+        self.add_handler('cell_keep', self.on_cell_keep)
 
         self.add_handler('area', self.make_logger(
             'Area: from (%(left).2f, %(top).2f) to (%(right).2f, %(bottom).2f)'))
@@ -124,7 +122,7 @@ class AgarGame(AgarClient):
             'Moved Wrongly? [17] %s'))
         self.add_handler('20', self.make_logger('Reset? [20]'))
 
-        self.own_id = -1
+        self.own_ids = []
         self.cells = defaultdict(Cell)
         self.leaderboard = []
         self.log_msgs = []
@@ -140,6 +138,9 @@ class AgarGame(AgarClient):
         GLib.io_add_watch(socket, GLib.IO_HUP,
                           lambda _, __: self.on_close or True)
 
+    def on_hello(self, **_):
+        self.send_handshake()
+
     def log_msg(self, msg):
         self.log_msgs.append(msg)
         print('[LOG]', msg)
@@ -153,17 +154,17 @@ class AgarGame(AgarClient):
             self.log_msg(text)
         return fun
 
-    def leaderboard_names(self, leaderboard):
+    def on_leaderboard_names(self, leaderboard):
         self.leaderboard = leaderboard
 
-    def cell_eaten(self, a, b):
-        pass  # TODO
+    def on_cell_eaten(self, a, b):
+        pass
 
-    def cell_info(self, **kwargs):
+    def on_cell_info(self, **kwargs):
         cid = kwargs['cid']
         self.cells[cid].update(**kwargs)
 
-    def cell_keep(self, keep_cells):
+    def on_cell_keep(self, keep_cells):
         for cid, cell in self.cells.items():
             cell.tick()
 
