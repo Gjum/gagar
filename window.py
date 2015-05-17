@@ -13,6 +13,14 @@ FUCHSIA = (1,0,1)
 
 BG_COLOR = DARKGREY
 
+def format_log(lines, w, indent='  '):
+    for l in lines:
+        ind = ''
+        while len(l) > len(ind):
+            yield l[:w]
+            ind = indent
+            l = ind + l[w:]
+
 def to_rgba(c, a):
     return c[0], c[1], c[2], a
 
@@ -96,11 +104,6 @@ class Cell:
         if self.alpha > .01:
             draw_text_center(c, (x, y), self.name)
 
-def printer_for(text):
-    def fun(**data):
-        print(text, data)
-    return fun
-
 # noinspection PyAttributeOutsideInit
 class AgarGame(AgarClient):
 
@@ -108,19 +111,26 @@ class AgarGame(AgarClient):
         AgarClient.__init__(self)
         self.crash_on_errors = True
         self.add_handler('hello', lambda **data: self.send_handshake())
-        self.add_handler('area', printer_for('Area'))
         self.add_handler('leaderboard_names', self.leaderboard_names)
         self.add_handler('cell_eaten', self.cell_eaten)
         self.add_handler('cell_info', self.cell_info)
         self.add_handler('cell_keep', self.cell_keep)
 
+        self.add_handler('area', self.make_logger(
+            'Area: from (%(left).2f, %(top).2f) to (%(right).2f, %(bottom).2f)'))
+        self.add_handler('new_id', self.make_logger('New ID: %(cid)i'))
+        self.add_handler('moved_wrongly', self.make_logger(
+            'Moved Wrongly? [17] %s'))
+        self.add_handler('20', self.make_logger('Reset? [20]'))
+
         self.own_id = -1
         self.cells = defaultdict(Cell)
         self.leaderboard = []
+        self.log_msgs = []
 
         url = url or get_url()
         socket = self.open_socket(url)
-        print('Connecting to', url)
+        self.log_msgs.append('Connecting to %s' % url)
 
         GLib.io_add_watch(socket, GLib.IO_IN,
                           lambda _, __: self.on_message(self.ws.recv()) or True)
@@ -128,6 +138,19 @@ class AgarGame(AgarClient):
                           lambda _, __: self.handle('error', error=None) or True)
         GLib.io_add_watch(socket, GLib.IO_HUP,
                           lambda _, __: self.on_close or True)
+
+    def log_msg(self, msg):
+        self.log_msgs.append(msg)
+        print('[LOG]', msg)
+
+    def make_logger(self, fmt):
+        def fun(**data):
+            try:
+                text = fmt % data
+            except TypeError:  # fmt is no formatting string
+                text = '%s %s' % (fmt, data)
+            self.log_msg(text)
+        return fun
 
     def leaderboard_names(self, leaderboard):
         self.leaderboard = leaderboard
@@ -166,6 +189,19 @@ class AgarGame(AgarClient):
             i += 1  # start with 1, not 0
             text = '%i. %s (%s)' % (i, name, size)
             draw_text_left(c, (leader_x, leader_line_h*i), text)
+
+        # scrolling log
+        log_start_y = leader_line_h * (1 + len(self.leaderboard))
+        log_line_h = 12
+        num_log_lines = int((WIN_H - log_start_y) / log_line_h)
+        self.log_msgs = self.log_msgs[-num_log_lines:]
+        log = list(format_log(self.log_msgs, 47))[-num_log_lines:]
+        for i, text in enumerate(log):
+        # for i in range(30):
+        #     text = '%02i ' % i
+        #     text += ''.join('%i' % ((i+3)%10) for i in range(30))
+            draw_text_left(c, (leader_x, log_start_y + log_line_h*i),
+                           text, size=10, face='monospace')
 
 WORLD_SIZE = 11180.339887498949  # TODO get from 'area' packet
 LOG_W = 300
