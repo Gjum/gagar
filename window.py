@@ -24,13 +24,18 @@ def scale_pos(pos, scale, view_center, screen_center):
     y = (y-vy) * scale + sy
     return x, y
 
-def draw_text(c, text, centerpos, color=WHITE, shadow=None):
-    c.select_font_face('sans')
-    c.set_font_size(12)
+def draw_text_center(c, center, text, *args, **kwargs):
     x_bearing, y_bearing, text_width, text_height, x_advance, y_advance = c.text_extents(text)
-    cx, cy = centerpos
+    cx, cy = center
     x = cx - x_bearing - text_width / 2
     y = cy - y_bearing - text_height / 2
+    draw_text_left(c, (x, y), text, *args, **kwargs)
+
+def draw_text_left(c, pos, text,
+                   color=WHITE, shadow=None, size=12, face='sans'):
+    c.select_font_face(face)
+    c.set_font_size(size)
+    x, y = pos
     if shadow:
         s_color, s_offset = shadow
         s_dx, s_dy = s_offset
@@ -89,7 +94,7 @@ class Cell:
         c.arc(x, y, self.size * scale, 0, TWOPI)
         c.fill()
         if self.alpha > .01:
-            draw_text(c, self.name, (x, y))
+            draw_text_center(c, (x, y), self.name)
 
 def printer_for(text):
     def fun(**data):
@@ -99,7 +104,7 @@ def printer_for(text):
 # noinspection PyAttributeOutsideInit
 class AgarGame(AgarClient):
 
-    def __init__(self):
+    def __init__(self, url):
         AgarClient.__init__(self)
         self.crash_on_errors = True
         self.add_handler('hello', lambda **data: self.send_handshake())
@@ -109,17 +114,13 @@ class AgarGame(AgarClient):
         self.add_handler('cell_info', self.cell_info)
         self.add_handler('cell_keep', self.cell_keep)
 
-        # TODO init window
-        self.reset_game()
-
-    def reset_game(self):
         self.own_id = -1
         self.cells = defaultdict(Cell)
+        self.leaderboard = []
 
-    def connect(self, url=None):
         url = url or get_url()
         socket = self.open_socket(url)
-        print(url)
+        print('Connecting to', url)
 
         GLib.io_add_watch(socket, GLib.IO_IN,
                           lambda _, __: self.on_message(self.ws.recv()) or True)
@@ -129,7 +130,7 @@ class AgarGame(AgarClient):
                           lambda _, __: self.on_close or True)
 
     def leaderboard_names(self, leaderboard):
-        pass  # TODO
+        self.leaderboard = leaderboard
 
     def cell_eaten(self, a, b):
         pass  # TODO
@@ -141,33 +142,53 @@ class AgarGame(AgarClient):
     def cell_keep(self, keep_cells):
         for cid, cell in self.cells.items():
             cell.tick()
-            # if cid not in keep_cells:
-            #     del self.cells[cid]
 
     def render(self, widget, c):
         c.set_source_rgba(*BG_COLOR)
         c.paint()
 
-        scale = 700 / 11500.0 * 5
-        view_center = [11180/2]*2
-        screen_center = [700/2]*2
+        scale = WIN_W / WORLD_SIZE * 5
+        view_center = WORLD_SIZE / 2, WORLD_SIZE / 2
+        screen_center = WIN_W / 2, WIN_H / 2
 
         for cell in self.cells.values():
             cell.draw(c, scale, view_center, screen_center)
 
-game = AgarGame()
-game.connect('ws://213.168.249.245:443')#get_url())
+        c.set_source_rgba(0,0,0, .6)
+        c.rectangle(WIN_W,0, LOG_W, WIN_H)
+        c.fill()
 
-win = Gtk.Window()
-win.set_title('agar.io')
-win.set_default_size(700, 700)
-win.connect('delete-event', Gtk.main_quit)
+        leader_x = WIN_W + 10
 
-da=Gtk.DrawingArea()
-da.connect('draw', game.render)
-win.add(da)
+        # leaderboard
+        leader_line_h = 20
+        for i, (size, name) in enumerate(reversed(sorted(self.leaderboard))):
+            i += 1  # start with 1, not 0
+            text = '%i. %s (%s)' % (i, name, size)
+            draw_text_left(c, (leader_x, leader_line_h*i), text)
 
-GLib.timeout_add(50, lambda: da.queue_draw() or True)
+WORLD_SIZE = 11180.339887498949  # TODO get from 'area' packet
+LOG_W = 300
+WIN_W = 800
+WIN_H = 800*10/16
 
-win.show_all()
-Gtk.main()
+class AgarWindow(Gtk.Window):
+    def __init__(self):
+        Gtk.Window.__init__(self)
+        self.set_title('agar.io')
+        self.set_default_size(WIN_W + LOG_W, WIN_H)
+        self.connect('delete-event', Gtk.main_quit)
+
+        game = AgarGame(get_url())
+
+        da=Gtk.DrawingArea()
+        da.connect('draw', game.render)
+        self.add(da)
+
+        GLib.timeout_add(50, lambda: da.queue_draw() or True)
+
+        self.show_all()
+        Gtk.main()
+
+if __name__ == '__main__':
+    AgarWindow()
