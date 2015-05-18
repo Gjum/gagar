@@ -120,22 +120,32 @@ class Cell:
         if y: pos_or_x = (pos_or_x, y)
         self.x, self.y = pos_or_x
 
-    def draw(self, c, scale, view_center, screen_center):
-        if self.alpha < .05:
-            return
+    def draw(self, c, scale, view_center, screen_center, show_debug=False):
         x, y = world_to_screen_pos(self.pos, scale, view_center, screen_center)
-        c.set_source_rgba(*to_rgba(self.color, self.alpha))
+        # circle
+        c.set_source_rgba(*to_rgba(self.color, .8))
         c.arc(x, y, self.size * scale, 0, TWOPI)
         c.fill()
-        if self.is_virus:
-            draw_text_center(c, (x, y), 'VV')
-        elif not self.name:
-            draw_text_center(c, (x, y-7), '%i' % self.cid)
-            draw_text_center(c, (x, y+7), '%i' % self.size)
-        else:
-            draw_text_center(c, (x, y-13), '%i' % self.cid)
-            draw_text_center(c, (x, y), self.name)
-            draw_text_center(c, (x, y+13), '%i' % self.size)
+        # name, size
+        if self.is_virus or self.size < 20:  # food <= 11 < 30 <= cells
+            pass  # do not draw name/size
+        elif self.is_agitated and show_debug:
+            draw_text_center(c, (x, y), '(agitated)')
+            draw_text_center(c, (x, y+12), '%i' % self.size)
+        elif self.name:
+            draw_text_center(c, (x, y), '%s' % self.name)
+            if show_debug: draw_text_center(c, (x, y+12), '%i' % self.size)
+        elif show_debug:
+            draw_text_center(c, (x, y), '%i' % self.size)
+
+def make_logger(fmt):
+    def fun(**data):
+        try:
+            text = fmt % data
+        except TypeError:  # fmt is no formatting string
+            text = '%s %s' % (fmt, data)
+        print('[LOG]', text)
+    return fun
 
 class AgarGame(AgarClient):
 
@@ -150,9 +160,8 @@ class AgarGame(AgarClient):
         self.add_handler('new_id', self.on_new_id)
         self.add_handler('area', self.on_area)
 
-        self.add_handler('moved_wrongly', self.make_logger(
-            'Moved Wrongly? [17] %s'))
-        self.add_handler('20', self.make_logger('Reset? [20]'))
+        self.add_handler('moved_wrongly', make_logger('Moved Wrongly? [17] %s'))
+        self.add_handler('20', make_logger('Reset? [20]'))
 
         # reset_world
         self.own_ids = set()
@@ -161,6 +170,7 @@ class AgarGame(AgarClient):
         self.leaderboard = []
         self.world_size = 11180.339887498949
         self.log_msgs = []
+        self.show_debug = False
 
         self.mouse_pos = 0,0
         self.screen_center = MAP_W / 2, WIN_H / 2
@@ -185,6 +195,7 @@ class AgarGame(AgarClient):
         self.send_handshake()
         self.nick = random.choice(special_names)
         self.log_msg('Nick: %s' % self.nick)
+        self.log_msg('Press R to start the game', update=0)
 
     def log_msg(self, msg, update=9):
         # update up to nineth-last msg with new data
@@ -197,22 +208,14 @@ class AgarGame(AgarClient):
             self.log_msgs.append(msg)
             print('[LOG]', msg)
 
-    def make_logger(self, fmt):
-        def fun(**data):
-            try:
-                text = fmt % data
-            except TypeError:  # fmt is no formatting string
-                text = '%s %s' % (fmt, data)
-            self.log_msg(text)
-        return fun
-
     def on_leaderboard_names(self, leaderboard):
         self.leaderboard = leaderboard
 
     def on_cell_eaten(self, a, b):
         if b in self.own_ids:  # we got eaten
+            self.log_msg('"%s" ate me!' % self.cells[a].name or 'Someone')
             self.own_ids.remove(b)
-            if not self.own_ids:
+            if not self.own_ids:  # dead, restart
                 self.send_nick(self.nick)
 
         if a in self.cells:
@@ -224,22 +227,25 @@ class AgarGame(AgarClient):
     def on_cell_info(self, **kwargs):
         cid = kwargs['cid']
         self.cells[cid].update(**kwargs)
+        if cid in self.own_ids:
+            size = sum(self.cells[oid].size for oid in self.own_ids)
+            self.log_msg('Size: %i' % size)
 
     def on_cell_keep(self, keep_cells):
         for cid in keep_cells:
             self.cells[cid].alpha = .8
+        # remove dead cells
         for cid in list(self.cells)[:]:
             cell = self.cells[cid]
             if cell.alpha < .05:
                 del self.cells[cid]
-                if cid in self.own_ids:
+                if cid in self.own_ids:  # own cells joined
                     self.own_ids.remove(cid)
-                    self.log_msg('ERR I got eaten! %i' % cid, update=0)
             cell.alpha *= .8
 
     def on_new_id(self, cid):
         if not self.own_ids:
-            self.log_msg('Respawn', update=0)
+            self.log_msg('Respawned', update=0)
             self.cells = defaultdict(Cell)
             self.own_ids.clear()
         self.own_ids.add(cid)
@@ -253,19 +259,21 @@ class AgarGame(AgarClient):
 
     def on_key_pressed(self, widget, event):
         key = event.keyval
-        if key == ord('r'):
+        if key == ord('h'):
+            self.show_debug = not self.show_debug
+        elif key == ord('r'):
             self.send_spectate()
             self.send_nick(self.nick)
+        elif key == ord('w'):
+            self.send_shoot()
         elif key == Gdk.KEY_space:
             self.send_split()
         elif key == ord('q') or key == Gdk.KEY_Escape:
             self.disconnect()
             Gtk.main_quit()
-        else:
-            self.log_msg('Key   %s' % Gdk.keyval_name(event.keyval))
 
     def on_mouse_moved(self, widget, event):
-        x, y = self.mouse_pos = event.x, event.y
+        self.mouse_pos = x, y = event.x, event.y
         mouse_world = screen_to_world_pos((x, y), *self.view_params)
         self.send_mouse(*mouse_world)
 
@@ -288,30 +296,25 @@ class AgarGame(AgarClient):
 
         self.update_view()
 
-        # world border
-        wl, wt = world_to_screen_pos((0,0), *self.view_params)
-        wr, wb = world_to_screen_pos((self.world_size,)*2, *self.view_params)
-        c.set_source_rgba(*BORDER_COLOR)
-        c.rectangle(wl, wt, *(self.world_size*self.scale,)*2)
-        c.stroke()
+        if self.show_debug:
+            # world border
+            wl, wt = world_to_screen_pos((0,0), *self.view_params)
+            c.set_source_rgba(*BORDER_COLOR)
+            c.rectangle(wl, wt, *(self.world_size*self.scale,)*2)
+            c.stroke()
 
-        wx, wy = world_to_screen_pos(self.world_center, *self.view_params)
-        c.set_source_rgba(*CROSSHAIR_COLOR)
+            # movement lines
+            for cid in self.own_ids:
+                cell = self.cells[cid]
+                x, y = world_to_screen_pos((cell.x, cell.y), *self.view_params)
+                c.set_source_rgba(*CROSSHAIR_COLOR)
+                c.move_to(x,y)
+                c.line_to(*self.mouse_pos)
+                c.stroke()
 
-        # movement line
-        c.move_to(wx,wy)
-        c.line_to(*self.mouse_pos)
-        c.stroke()
-
-        # crosshair
-        c.move_to(wx,wt)
-        c.line_to(wx,wb)
-        c.move_to(wl,wy)
-        c.line_to(wr,wy)
-        c.stroke()
-
+        # cells
         for cell in self.cells.values():
-            cell.draw(c, *self.view_params)
+            cell.draw(c, *self.view_params, show_debug=self.show_debug)
 
         # logging area
         c.set_source_rgba(0,0,0, .6)
