@@ -1,8 +1,6 @@
-from collections import defaultdict
 import random
-# noinspection PyUnresolvedReferences
 from gi.repository import Gtk, GLib, Gdk
-from client import AgarClient, get_url
+from client import AgarClient, get_url, WORLD_SIZE
 
 special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'germany;ukraine;france;sweden;hitler;north korea;' \
@@ -23,7 +21,6 @@ special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
     .split(';')
 
 TWOPI = 6.28
-WORLD_SIZE = 11180.339887498949
 
 def to_rgba(c, a):
     return c[0], c[1], c[2], a
@@ -85,29 +82,6 @@ def draw_text_left(c, pos, text,
     c.set_source_rgba(*color)
     c.show_text(text)
 
-class Cell:
-    def __init__(self):
-        self.cid = -1
-        self.x = -1
-        self.y = -1
-        self.size = -1
-        self.name = ''
-        self.color = FUCHSIA
-        self.is_virus = False
-        self.is_agitated = False
-
-    def update(self, cid=-1, x=-1, y=-1, size=10, name='',
-               color=BLACK, is_virus=False, is_agitated=False):
-        self.cid = cid
-        self.x = x
-        self.y = y
-        self.size = size
-        if name and not self.name:
-            self.name = name
-        self.color = tuple(map(lambda rgb: rgb / 256.0, color))
-        self.is_virus = is_virus
-        self.is_agitated = is_agitated
-
 def pos_xy(o):
     return o.x, o.y
 
@@ -130,58 +104,26 @@ def draw_cell(c, cell, viewport, show_debug=False):
     elif show_debug:
         draw_text_center(c, (x, y), '%i' % cell.size)
 
-def make_logger(fmt):
-    def fun(**data):
-        try:
-            text = fmt % data
-        except TypeError:  # fmt is no formatting string
-            text = '%s %s' % (fmt, data)
-        print('[LOG]', text)
-    return fun
-
 class AgarGame(AgarClient):
 
-    def __init__(self, url):
+    def __init__(self, url, nick=None):
         AgarClient.__init__(self)
-        self.crash_on_errors = True
-        self.add_handler('hello', self.on_hello)
-        self.add_handler('leaderboard_names', self.on_leaderboard_names)
-        self.add_handler('cell_eaten', self.on_cell_eaten)
-        self.add_handler('cell_info', self.on_cell_info)
-        self.add_handler('cell_keep', self.on_cell_keep)
-        self.add_handler('new_id', self.on_new_id)
-        self.add_handler('area', self.on_area)
-
-        self.add_handler('moved_wrongly', make_logger('Moved Wrongly? [17] %s'))
-        self.add_handler('20', make_logger('Reset? [20]'))
-
-        # reset_world
-        self.own_ids = set()
-        self.cells = defaultdict(Cell)
-
-        self.updated_cells = set()
-        self.leaderboard = []
-        self.world_size = WORLD_SIZE
         self.log_msgs = []
 
+        self.nick = random.choice(special_names) if nick is None else nick
+        self.log_msg('Nick: %s' % self.nick)
+
         url = url or get_url()
-        socket = self.open_socket(url)
         self.log_msg('Connecting to %s' % url)
 
+        # check socket in GTK main loop
+        socket = self.open_socket(url)
         GLib.io_add_watch(socket, GLib.IO_IN,
-                          lambda _, __: self.on_message(self.ws.recv()) or True)
+                          lambda ws, _: self.on_message(ws.recv()) or True)
         GLib.io_add_watch(socket, GLib.IO_ERR,
-                          lambda _, __: self.handle('error') or True)
+                          lambda _, __: self.handle('sock_error') or True)
         GLib.io_add_watch(socket, GLib.IO_HUP,
-                          lambda _, __: self.on_close or True)
-
-        self.nick = random.choice(special_names)
-
-    def on_hello(self, **_):
-        self.send_handshake()
-        self.nick = random.choice(special_names)
-        self.log_msg('Nick: %s' % self.nick)
-        self.log_msg('Press R to start the game', update=0)
+                          lambda _, __: self.handle('sock_closed') or True)
 
     def log_msg(self, msg, update=9):
         # update up to nineth-last msg with new data
@@ -194,51 +136,27 @@ class AgarGame(AgarClient):
             self.log_msgs.append(msg)
             print('[LOG]', msg)
 
-    def on_leaderboard_names(self, leaderboard):
-        self.leaderboard = leaderboard
+    def on_hello(self):
+        self.send_handshake()
+        self.log_msg('Press R to respawn', update=0)
 
-    def on_cell_eaten(self, a, b):
-        if b in self.own_ids:  # we got eaten
-            self.log_msg('"%s" ate me!' % self.cells[a].name or 'Someone')
-            self.own_ids.remove(b)
-            if not self.own_ids:  # dead, restart
-                self.send_nick(self.nick)
+    def on_cell_eaten(self, eater_id, eaten_id):
+        if eaten_id in self.own_ids:  # we got eaten
+            self.log_msg('"%s" ate me!' % (
+                self.cells[eater_id].name or 'Someone'))
+            if len(self.own_ids) <= 1:  # dead, restart
+                self.send_restart()
 
-        if b in self.cells:
-            del self.cells[b]
-
-    def on_cell_info(self, **kwargs):
-        cid = kwargs['cid']
-        self.cells[cid].update(**kwargs)
-        self.updated_cells.add(cid)
-        if cid in self.own_ids:
+    def on_world_update_post(self):
+        if self.own_ids:
             size = sum(self.cells[oid].size for oid in self.own_ids)
             self.log_msg('Size: %i' % size)
 
-    def on_cell_keep(self, keep_cells):
-        self.updated_cells.update(keep_cells)
-        # remove dead cells
-        for cid in list(self.cells)[:]:
-            if cid not in self.updated_cells:
-                del self.cells[cid]
-                if cid in self.own_ids:  # own cells joined
-                    self.own_ids.remove(cid)
-        self.updated_cells.clear()
-
-    def on_new_id(self, cid):
-        if not self.own_ids:
+    def on_own_id(self, cid):
+        if len(self.own_ids) == 1:
             self.log_msg('Respawned', update=0)
-            self.cells = defaultdict(Cell)
-            self.own_ids.clear()
-        self.own_ids.add(cid)
-        self.cells[cid].name = self.nick
 
-    def on_area(self, left, top, right, bottom):
-        assert right - left == bottom - top, 'World is not square'
-        self.world_size = right - left
-        self.log_msg('Area: from (%.2f, %.2f) to (%.2f, %.2f)' \
-                     % (left, top, right, bottom))
-
+# TODO auto-update on window resize
 MAP_W = 800
 LOG_W = 300
 WIN_W = MAP_W+LOG_W
@@ -297,7 +215,7 @@ class AgarWindow:
         elif self.game:
             if key == ord('r'):
                 self.game.send_spectate()
-                self.game.send_nick(self.game.nick)
+                self.game.send_restart()
             elif key == ord('w'):
                 self.game.send_shoot()
             elif key == Gdk.KEY_space:
@@ -366,7 +284,7 @@ class AgarWindow:
         # leaderboard
         leader_line_h = 20
         for i, (size, name) in enumerate(
-                reversed(sorted(self.game.leaderboard))):
+                reversed(sorted(self.game.leaderboard_names))):
             text = '%i. %s (%s)' % (i+1, name, size)
             space_used += leader_line_h
             draw_text_left(c, (infoarea_x, space_used), text)
@@ -374,7 +292,7 @@ class AgarWindow:
 
         # scrolling log
         log_line_h = 12
-        log_char_w = 6  # xxx
+        log_char_w = 6  # seems to work with my font
         num_log_lines = int((WIN_H - space_used) / log_line_h)
         self.game.log_msgs = self.game.log_msgs[-num_log_lines:]
         log = list(format_log(self.game.log_msgs, LOG_W/log_char_w))
