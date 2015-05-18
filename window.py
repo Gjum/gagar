@@ -92,8 +92,6 @@ class Cell:
         self.is_virus = False
         self.is_agitated = False
 
-        self.alpha = .8
-
     def update(self, cid=-1, x=-1, y=-1, size=10, name='',
                color=BLACK, is_virus=False, is_agitated=False):
         self.cid = cid
@@ -105,11 +103,6 @@ class Cell:
         self.color = tuple(map(lambda rgb: rgb / 256.0, color))
         self.is_virus = is_virus
         self.is_agitated = is_agitated
-
-        self.alpha = .8
-
-    def tick(self):
-        self.alpha *= .8
 
     @property
     def pos(self):
@@ -167,6 +160,7 @@ class AgarGame(AgarClient):
         self.own_ids = set()
         self.cells = defaultdict(Cell)
 
+        self.updated_cells = set()
         self.leaderboard = []
         self.world_size = 11180.339887498949
         self.log_msgs = []
@@ -218,30 +212,26 @@ class AgarGame(AgarClient):
             if not self.own_ids:  # dead, restart
                 self.send_nick(self.nick)
 
-        if a in self.cells:
-            self.cells[a].alpha = .8
-
         if b in self.cells:
             del self.cells[b]
 
     def on_cell_info(self, **kwargs):
         cid = kwargs['cid']
         self.cells[cid].update(**kwargs)
+        self.updated_cells.add(cid)
         if cid in self.own_ids:
             size = sum(self.cells[oid].size for oid in self.own_ids)
             self.log_msg('Size: %i' % size)
 
     def on_cell_keep(self, keep_cells):
-        for cid in keep_cells:
-            self.cells[cid].alpha = .8
+        self.updated_cells.update(keep_cells)
         # remove dead cells
         for cid in list(self.cells)[:]:
-            cell = self.cells[cid]
-            if cell.alpha < .05:
+            if cid not in self.updated_cells:
                 del self.cells[cid]
                 if cid in self.own_ids:  # own cells joined
                     self.own_ids.remove(cid)
-            cell.alpha *= .8
+        self.updated_cells.clear()
 
     def on_new_id(self, cid):
         if not self.own_ids:
