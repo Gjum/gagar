@@ -230,18 +230,17 @@ class AgarClient:
     def send_nick(self, nick):
         self.send_struct('<B%iH' % len(nick), 0, *map(ord, nick))
 
-    def send_update(self, x, y):
+    def send_mouse(self, x, y):
         self.send_struct('<BddI', 16, x, y, 0)
 
     def send_spectate(self):
         self.send_struct('<B', 1)
 
-## special msgs
-# spectate: send uint8 1
-# space/tap: send update; send uint8 17
-# q: send uint8 18; send uint8 19
-# w: send update; send uint8 21
-##
+    def send_split(self):
+        self.send_struct('<B', 17)
+
+    def send_shoot(self):
+        self.send_struct('<B', 21)
 
 ####################
 
