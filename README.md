@@ -20,7 +20,6 @@ Controls
 
 TODO
 ----
-- make window respond to resizing
 - mark cells:
   - eatable
   - can eat you

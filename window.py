@@ -156,13 +156,9 @@ class AgarGame(AgarClient):
         if len(self.own_ids) == 1:
             self.log_msg('Respawned', update=0)
 
-# TODO auto-update on window resize
-MAP_W = 800
-LOG_W = 300
-WIN_W = MAP_W+LOG_W
-WIN_H = MAP_W*10/16
-
 class AgarWindow:
+    LOG_W = 300
+
     def __init__(self):
         # Gtk.main() swallows exceptions, get them back
         import sys
@@ -171,14 +167,16 @@ class AgarWindow:
         self.game = None
 
         self.show_debug = False
+        self.win_w, self.win_h = 1000, (1000-self.LOG_W) * 9/16
+        self.map_w = self.win_w - self.LOG_W
         self.mouse_pos = 0,0
-        self.screen_center = MAP_W / 2, WIN_H / 2
-        self.scale = MAP_W / self.world_size * 5  # TODO calculate scale
+        self.screen_center = self.map_w / 2, self.win_h / 2
+        self.scale = max(self.win_h / 1080, self.win_w / 1920)
         self.world_center = self.world_size / 2, self.world_size / 2
 
         self.window = Gtk.Window()
         self.window.set_title('agar.io')
-        self.window.set_default_size(WIN_W, WIN_H)
+        self.window.set_default_size(self.win_w, self.win_h)
         self.window.connect('delete-event', Gtk.main_quit)
 
         da = Gtk.DrawingArea()
@@ -227,9 +225,20 @@ class AgarWindow:
             self.game.send_mouse(*mouse_world)
 
     def update_viewport(self):
+        alloc = self.window.get_allocation()
+        self.win_w, self.win_h = alloc.width, alloc.height
+        self.map_w = self.win_w - self.LOG_W
+        self.screen_center = self.map_w / 2, self.win_h / 2
+
         if not self.game:
             return
-        self.scale = MAP_W / self.game.world_size * 6  # TODO calculate scale
+
+        if self.game.own_ids:
+            size = sum(self.game.cells[oid].size for oid in self.game.own_ids)
+            self.scale = pow(min(1, 64 / size), 0.4) \
+                         * max(self.win_h / 1080, self.map_w / 1920)
+        # else: keep current scale
+
         if self.game.own_ids:
             left   = min(self.game.cells[cid].x for cid in self.game.own_ids)
             right  = max(self.game.cells[cid].x for cid in self.game.own_ids)
@@ -274,10 +283,10 @@ class AgarWindow:
 
         # logging area
         c.set_source_rgba(0,0,0, .6)
-        c.rectangle(MAP_W,0, LOG_W, WIN_H)
+        c.rectangle(self.map_w,0, self.LOG_W, self.win_h)
         c.fill()
 
-        infoarea_x = MAP_W + 10
+        infoarea_x = self.map_w + 10
         space_used = 0
 
         # leaderboard
@@ -292,9 +301,9 @@ class AgarWindow:
         # scrolling log
         log_line_h = 12
         log_char_w = 6  # seems to work with my font
-        num_log_lines = int((WIN_H - space_used) / log_line_h)
+        num_log_lines = int((self.win_h - space_used) / log_line_h)
         self.game.log_msgs = self.game.log_msgs[-num_log_lines:]
-        log = list(format_log(self.game.log_msgs, LOG_W/log_char_w))
+        log = list(format_log(self.game.log_msgs, self.LOG_W/log_char_w))
         for i, text in enumerate(log[-num_log_lines:]):
             draw_text_left(c, (infoarea_x, space_used),
                            text, size=10, face='monospace')
