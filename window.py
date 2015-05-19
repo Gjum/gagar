@@ -214,7 +214,6 @@ class AgarWindow:
             self.show_debug = not self.show_debug
         elif self.game:
             if key == ord('r'):
-                self.game.send_spectate()
                 self.game.send_restart()
             elif key == ord('w'):
                 self.game.send_shoot()
@@ -223,8 +222,8 @@ class AgarWindow:
 
     def on_mouse_moved(self, _, event):
         self.mouse_pos = pos_xy(event)
-        mouse_world = screen_to_world_pos(self.mouse_pos, self.viewport)
         if self.game:
+            mouse_world = screen_to_world_pos(self.mouse_pos, self.viewport)
             self.game.send_mouse(*mouse_world)
 
     def update_viewport(self):
@@ -283,9 +282,9 @@ class AgarWindow:
 
         # leaderboard
         leader_line_h = 20
-        for i, (size, name) in enumerate(
-                reversed(sorted(self.game.leaderboard_names))):
-            text = '%i. %s (%s)' % (i+1, name, size)
+        for i, (points, name) in enumerate(self.game.leaderboard_names):
+            name = name or 'An Unnamed Cell'
+            text = '%i. %s (%s)' % (i+1, name, points)
             space_used += leader_line_h
             draw_text_left(c, (infoarea_x, space_used), text)
         space_used += leader_line_h

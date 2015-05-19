@@ -165,6 +165,9 @@ class AgarClient:
                   e.args[0], str(BufferStruct(msg)), file=stderr)
             raise e
 
+    def disconnect(self):
+        self.ws.close()
+
     def parse_world_update(self, s):
         # we call handlers before changing any cells, so
         # handlers can print names, check own_ids, ...
