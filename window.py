@@ -1,6 +1,6 @@
 import random
 from gi.repository import Gtk, GLib, Gdk
-from client import AgarClient, get_url, WORLD_SIZE
+from client import AgarClient, Handler
 
 special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'germany;ukraine;france;sweden;hitler;north korea;' \
@@ -32,32 +32,14 @@ LIGHTGRAY = (.7,)*3
 BLUE = (.2,.2,1)
 FUCHSIA = (1,0,1)
 
-BG_COLOR = DARKGRAY
-BORDER_COLOR = LIGHTGRAY
-CROSSHAIR_COLOR = to_rgba(FUCHSIA, .3)
-
-def format_log(lines, w, indent='  '):
-    w = int(w)
+def format_log(lines, width, indent='  '):
+    width = int(width)
     for l in lines:
         ind = ''
         while len(l) > len(ind):
-            yield l[:w]
+            yield l[:width]
             ind = indent
-            l = ind + l[w:]
-
-def world_to_screen_pos(pos, viewport):
-    scale, world_center, screen_center = viewport
-    vx, vy = world_center
-    sx, sy = screen_center
-    x, y = pos
-    x = (x-vx) * scale + sx
-    y = (y-vy) * scale + sy
-    return x, y
-
-def screen_to_world_pos(pos, viewport):
-    # only works with current formula in world_to_screen_pos()
-    scale, world_center, screen_center = viewport
-    return world_to_screen_pos(pos, (1/scale, screen_center, world_center))
+            l = ind + l[width:]
 
 def draw_text_center(c, center, text, *args, **kwargs):
     x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
@@ -85,201 +67,185 @@ def draw_text_left(c, pos, text,
 def pos_xy(o):
     return o.x, o.y
 
-def draw_cell(c, cell, viewport, show_debug=False):
-    x, y = world_to_screen_pos(pos_xy(cell), viewport)
-    scale = viewport[0]
-    # circle
-    c.set_source_rgba(*to_rgba(cell.color, .8))
-    c.arc(x, y, cell.size * scale, 0, TWOPI)
-    c.fill()
-    # name, size
-    if cell.is_virus or cell.size < 20:  # food <= 11 < 30 <= cells
-        pass  # do not draw name/size
-    elif cell.is_agitated and show_debug:
-        draw_text_center(c, (x, y), '(agitated)')
-        draw_text_center(c, (x, y+12), '%i' % cell.size)
-    elif cell.name:
-        draw_text_center(c, (x, y), '%s' % cell.name)
-        if show_debug: draw_text_center(c, (x, y+12), '%i' % cell.size)
-    elif show_debug:
-        draw_text_center(c, (x, y), '%i' % cell.size)
+class LoggingHandler(Handler):
 
-class AgarGame(AgarClient):
-
-    def __init__(self, url, nick=None):
-        AgarClient.__init__(self)
+    def __init__(self, client):
+        self.client = client
         self.log_msgs = []
 
-        self.nick = random.choice(special_names) if nick is None else nick
-        self.log_msg('Nick: %s' % self.nick)
-
-        url = url or get_url()
-        self.log_msg('Connecting to %s' % url)
-
-        # check socket in GTK main loop
-        socket = self.open_socket(url)
-        GLib.io_add_watch(socket, GLib.IO_IN,
-                          lambda ws, _: self.on_message(ws.recv()) or True)
-        GLib.io_add_watch(socket, GLib.IO_ERR,
-                          lambda _, __: self.handle('sock_error') or True)
-        GLib.io_add_watch(socket, GLib.IO_HUP,
-                          lambda _, __: self.handle('sock_closed') or True)
-
     def log_msg(self, msg, update=9):
-        # update up to nineth-last msg with new data
+        """
+        Updates up to 9th-last msg with new data.
+        Compares first 5 chars or up to first space.
+        Set update=0 for no updating.
+        """
+        first_space = msg.index(' ') if ' ' in msg else 5
         for i, log_msg in enumerate(reversed(
                 self.log_msgs[-update:] if update else [])):
-            if msg[:5] == log_msg[:5]:
+            if msg[:first_space] == log_msg[:first_space]:
                 self.log_msgs[-i-1] = msg
                 break
         else:
             self.log_msgs.append(msg)
             print('[LOG]', msg)
 
-    def on_hello(self):
-        self.send_handshake()
-        self.log_msg('Press R to respawn', update=0)
+    def on_sock_open(self):
+        # remove ws:// and :433 part
+        url = self.client.url[5:-4]
+        self.log_msg('Connected as "%s" to %s' % (self.client.nick, url))
 
     def on_cell_eaten(self, eater_id, eaten_id):
-        if eaten_id in self.own_ids:  # we got eaten
-            self.log_msg('"%s" ate me!' % (
-                self.cells[eater_id].name or 'Someone'))
-            if len(self.own_ids) <= 1:  # dead, restart
-                self.send_restart()
+        if eaten_id in self.client.own_ids:
+            name = 'Someone'
+            if eater_id in self.client.cells:
+                name = '"%s"' % self.client.cells[eater_id].name
+            self.log_msg('%s ate me!' % name)
 
     def on_world_update_post(self):
-        if self.own_ids:
-            size = sum(self.cells[oid].size for oid in self.own_ids)
-            self.log_msg('Size: %i' % size)
+        x, y = self.client.center
+        px, py = x*100/self.client.world_size, y*100/self.client.world_size
+        self.log_msg('Size: %i Pos: (%.2f %.2f) (%i%% %i%%)'
+                     % (self.client.total_size, x, y, round(px), round(py)))
+
+    def on_death(self):
+        self.client.send_respawn()
 
     def on_own_id(self, cid):
-        if len(self.own_ids) == 1:
+        if len(self.client.own_ids) == 1:
             self.log_msg('Respawned', update=0)
 
 class AgarWindow:
     LOG_W = 300
 
     def __init__(self):
-        # Gtk.main() swallows exceptions, get them back
-        import sys
-        sys.excepthook = lambda *a: sys.__excepthook__(*a) or sys.exit()
-
-        self.game = None
-
         self.show_debug = False
         self.win_w, self.win_h = 1000, (1000-self.LOG_W) * 9/16
         self.map_w = self.win_w - self.LOG_W
         self.mouse_pos = 0,0
         self.screen_center = self.map_w / 2, self.win_h / 2
-        self.scale = max(self.win_h / 1080, self.win_w / 1920)
-        self.world_center = self.world_size / 2, self.world_size / 2
+        self.screen_scale = max(self.win_h / 1080, self.win_w / 1920)
 
         self.window = Gtk.Window()
         self.window.set_title('agar.io')
         self.window.set_default_size(self.win_w, self.win_h)
         self.window.connect('delete-event', Gtk.main_quit)
 
-        da = Gtk.DrawingArea()
-        self.window.add(da)
+        drawing_area = Gtk.DrawingArea()
+        self.window.add(drawing_area)
 
         self.window.set_events(Gdk.EventMask.POINTER_MOTION_MASK)
         self.window.connect('key-press-event', self.on_key_pressed)
         self.window.connect('motion-notify-event', self.on_mouse_moved)
-        da.connect('draw', self.draw)
+        drawing_area.connect('draw', self.draw)
 
-        GLib.timeout_add(50, self.tick, da)
-        GLib.idle_add(self.start_game)
-        # TODO draw window before connecting
+        GLib.timeout_add(50, self.tick, drawing_area)
+
+        self.client = AgarClient()
+        self.client.nick = random.choice(special_names)
+
+        self.logging_handler = LoggingHandler(self.client)
+        self.client.add_handler(self.logging_handler)
+
+        self.client.connect()
+        self.logging_handler.log_msg('Press R to respawn', update=0)
+
+        # check socket in GTK main loop
+        GLib.io_add_watch(self.client.ws, GLib.IO_IN, lambda ws, _:
+                          self.client.on_message(ws.recv()) or True)
+        GLib.io_add_watch(self.client.ws, GLib.IO_ERR, lambda _, __:
+                          self.client.handle('sock_error') or True)
+        GLib.io_add_watch(self.client.ws, GLib.IO_HUP, lambda _, __:
+                          self.client.handle('sock_closed') or True)
+
+        self.window.show_all()
+
+        # Gtk.main() swallows exceptions, get them back
+        import sys
+        sys.excepthook = lambda *args: sys.__excepthook__(*args) or sys.exit()
 
         Gtk.main()
-
-    @property
-    def world_size(self):
-        # convenience function, do not crash when no game is running
-        return self.game.world_size if self.game else WORLD_SIZE
-
-    def start_game(self):
-        self.game = AgarGame(get_url())
-        self.window.show_all()
 
     def on_key_pressed(self, _, event):
         key = event.keyval
         if key == ord('q') or key == Gdk.KEY_Escape:
-            if self.game:
-                self.game.disconnect()
+            self.client.disconnect()
             Gtk.main_quit()
         elif key == ord('h'):
             self.show_debug = not self.show_debug
-        elif self.game:
-            if key == ord('r'):
-                self.game.send_restart()
-            elif key == ord('w'):
-                self.game.send_shoot()
-            elif key == Gdk.KEY_space:
-                self.game.send_split()
+        elif key == ord('r'):
+            self.client.send_respawn()
+        elif key == ord('w'):
+            self.client.send_shoot()
+        elif key == Gdk.KEY_space:
+            self.client.send_split()
 
     def on_mouse_moved(self, _, event):
         self.mouse_pos = pos_xy(event)
-        if self.game:
-            mouse_world = screen_to_world_pos(self.mouse_pos, self.viewport)
-            self.game.send_mouse(*mouse_world)
+        mouse_world = self.screen_to_world_pos(self.mouse_pos)
+        self.client.send_mouse(*mouse_world)
 
-    def update_viewport(self):
+    def world_to_screen_pos(self, pos):
+        wx, wy = self.client.center
+        sx, sy = self.screen_center
+        x, y = pos
+        x = (x-wx) * self.screen_scale + sx
+        y = (y-wy) * self.screen_scale + sy
+        return x, y
+
+    def screen_to_world_pos(self, pos):
+        wx, wy = self.client.center
+        sx, sy = self.screen_center
+        x, y = pos
+        x = (x-sx) * self.screen_scale + wx
+        y = (y-sy) * self.screen_scale + wy
+        return x, y
+
+    def draw(self, _, c):
+        c.set_source_rgba(*DARKGRAY)
+        c.paint()
+
         alloc = self.window.get_allocation()
         self.win_w, self.win_h = alloc.width, alloc.height
         self.map_w = self.win_w - self.LOG_W
         self.screen_center = self.map_w / 2, self.win_h / 2
 
-        if not self.game:
-            return
-
-        if self.game.own_ids:
-            size = sum(self.game.cells[oid].size for oid in self.game.own_ids)
-            self.scale = pow(min(1, 64 / size), 0.4) \
-                         * max(self.win_h / 1080, self.map_w / 1920)
-        # else: keep current scale
-
-        if self.game.own_ids:
-            left   = min(self.game.cells[cid].x for cid in self.game.own_ids)
-            right  = max(self.game.cells[cid].x for cid in self.game.own_ids)
-            top    = min(self.game.cells[cid].y for cid in self.game.own_ids)
-            bottom = max(self.game.cells[cid].y for cid in self.game.own_ids)
-            self.world_center = (left + right) / 2, (top + bottom) / 2
-
-    @property
-    def viewport(self):
-        return self.scale, self.world_center, self.screen_center
-
-    def draw(self, _, c):
-        c.set_source_rgba(*BG_COLOR)
-        c.paint()
-
-        # draw game
-
-        if not self.game:
-            return
-
-        self.update_viewport()
+        self.screen_scale = self.client.scale * max(self.win_h / 1080, self.win_w / 1920)
 
         if self.show_debug:
             # world border
-            wl, wt = world_to_screen_pos((0,0), self.viewport)
-            c.set_source_rgba(*BORDER_COLOR)
-            c.rectangle(wl, wt, *(self.game.world_size*self.scale,)*2)
+            wl, wt = self.world_to_screen_pos((0,0))
+            c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
+            c.rectangle(wl, wt, *(self.client.world_size*self.screen_scale,)*2)
             c.stroke()
 
             # movement lines
-            for cid in self.game.own_ids:
-                cell = self.game.cells[cid]
-                x, y = world_to_screen_pos(pos_xy(cell), self.viewport)
-                c.set_source_rgba(*CROSSHAIR_COLOR)
+            for cid in self.client.own_ids:
+                cell = self.client.cells[cid]
+                x, y = self.world_to_screen_pos(pos_xy(cell))
+                c.set_source_rgba(*to_rgba(FUCHSIA, .3))
                 c.move_to(x,y)
                 c.line_to(*self.mouse_pos)
                 c.stroke()
 
         # cells
-        for cell in self.game.cells.values():
-            draw_cell(c, cell, self.viewport, show_debug=self.show_debug)
+        for cell in self.client.cells.values():
+            x, y = self.world_to_screen_pos(pos_xy(cell))
+            # circle
+            c.set_source_rgba(*to_rgba(cell.color, .8))
+            c.arc(x, y, cell.size * self.screen_scale, 0, TWOPI)
+            c.fill()
+            # name, size
+            if cell.is_virus or cell.size < 20:  # food <= 11 < 30 <= cells
+                pass  # do not draw name/size
+            elif cell.is_agitated and self.show_debug:
+                draw_text_center(c, (x, y), '(agitated)')
+                draw_text_center(c, (x, y+12), '%i' % cell.size)
+            elif cell.name:
+                draw_text_center(c, (x, y), '%s' % cell.name)
+                if self.show_debug:
+                    draw_text_center(c, (x, y+12), '%i' % cell.size)
+            elif self.show_debug:
+                draw_text_center(c, (x, y), '%i' % cell.size)
 
         # logging area
         c.set_source_rgba(0,0,0, .6)
@@ -291,8 +257,8 @@ class AgarWindow:
 
         # leaderboard
         leader_line_h = 20
-        for i, (points, name) in enumerate(self.game.leaderboard_names):
-            name = name or 'An Unnamed Cell'
+        for i, (points, name) in enumerate(self.client.leaderboard_names):
+            name = name or 'An unnamed cell'
             text = '%i. %s (%s)' % (i+1, name, points)
             space_used += leader_line_h
             draw_text_left(c, (infoarea_x, space_used), text)
@@ -302,18 +268,16 @@ class AgarWindow:
         log_line_h = 12
         log_char_w = 6  # seems to work with my font
         num_log_lines = int((self.win_h - space_used) / log_line_h)
-        self.game.log_msgs = self.game.log_msgs[-num_log_lines:]
-        log = list(format_log(self.game.log_msgs, self.LOG_W/log_char_w))
+        log = list(format_log(self.logging_handler.log_msgs,
+                              self.LOG_W/log_char_w))
         for i, text in enumerate(log[-num_log_lines:]):
             draw_text_left(c, (infoarea_x, space_used),
                            text, size=10, face='monospace')
             space_used += log_line_h
 
-    def tick(self, da):
-        if self.game:
-            self.game.send_mouse(
-                *screen_to_world_pos(self.mouse_pos, self.viewport))
-        da.queue_draw()
+    def tick(self, drawing_area):
+        self.client.send_mouse(*self.screen_to_world_pos(self.mouse_pos))
+        drawing_area.queue_draw()
         return True
 
 if __name__ == '__main__':

@@ -79,6 +79,13 @@ def get_url(region='EU-London'):
             .read().decode().split('\n')[0]
     return 'ws://%s' % addr
 
+class Handler:
+    """Base class. `handle()` calls `self.on_<...>`."""
+
+    def handle(self, ident, **data):
+        func = getattr(self, 'on_%s' % ident, None)
+        if func: func(**data)
+
 class Cell:
     NO_COLOR = (1,0,1)
 
@@ -104,46 +111,66 @@ class Cell:
         self.is_virus = is_virus
         self.is_agitated = is_agitated
 
-packet_dict = {
-    ord('H'): 'hello',
-    16: 'world_update',
-    32: 'own_id',
-    49: 'leaderboard_names',
-    50: 'leaderboard_groups',
-    64: 'world_rect',
-    17: '17', 20: '20',  # never sent, no idea what these are for
-}
-
 class AgarClient:
-    """Handles connection to server and maintains world state"""
+    """Talks to a server and maintains the world state."""
+
+    packet_dict = {
+        ord('H'): 'hello',
+        16: 'world_update',
+        32: 'own_id',
+        49: 'leaderboard_names',
+        50: 'leaderboard_groups',
+        64: 'world_rect',
+        17: '17', 20: '20',  # never sent by server, no idea what these are for
+    }
 
     def __init__(self):
+        self.handlers = []
         self.ws = websocket.WebSocket()
+        self.url = ''
         self.cells = defaultdict(Cell)
         self.leaderboard_names = []
         self.leaderboard_groups = []
         self.own_ids = set()
         self.world_size = WORLD_SIZE  # size, not rect; assuming w == h
         self.nick = ''
+        self.total_size = 0
+        self.scale = 1
+        self.center = self.world_size / 2, self.world_size / 2
+
+    def add_handler(self, handler):
+        self.handlers.append(handler)
+
+    def remove_handler(self, handler):
+        self.handlers.remove(handler)
 
     def handle(self, ident, **data):
-        handler = getattr(self, 'on_%s' % ident, lambda *_, **__: None)
-        try:
-            handler(**data)
-        except Exception as e:
-            print('Handler failed: on_%s' % ident, data, file=stderr)
-            raise e
+        for handler in self.handlers[:]:
+            try:
+                handler.handle(ident, **data)
+            except Exception as e:
+                print('Handler %s failed on %s %s'
+                      % (handler.__class__.__name__, ident, data),
+                      file=stderr)
+                raise e
 
-    def open_socket(self, url):
-        self.ws.connect(url, origin='http://agar.io')
+    def connect(self, url=None):
+        if self.ws.connected:
+            raise ValueError('Already connected to "%s"', self.url)
+        self.url = url or get_url()
+        self.ws.connect(self.url, origin='http://agar.io')
         self.handle('sock_open')
-        return self.ws
 
-    def connect(self, url):
+    def disconnect(self):
+        self.ws.close()
+        self.reset_world()
+        self.leaderboard_names = []
+        self.leaderboard_groups = []
+
+    def listen(self):
         """Set up a quick connection. Returns on disconnect."""
-        self.open_socket(url)
         import select
-        while 1:
+        while self.ws.connected:
             r, w, e = select.select((self.ws.sock, ), (), ())
             if r:
                 self.on_message(self.ws.recv())
@@ -151,12 +178,17 @@ class AgarClient:
                 self.handle('sock_error')
         self.handle('sock_closed')
 
+    def reset_world(self):
+        self.cells.clear()
+        self.own_ids.clear()
+        self.total_size = 0
+
     def on_message(self, msg):
         if not msg:
             print('ERROR empty message', file=stderr)
             return
         s = BufferStruct(msg)
-        ident = packet_dict[s.pop_uint8()]
+        ident = self.packet_dict[s.pop_uint8()]
         parser = getattr(self, 'parse_%s' % ident, None)
         try:
             parser(s)
@@ -165,13 +197,11 @@ class AgarClient:
                   e.args[0], str(BufferStruct(msg)), file=stderr)
             raise e
 
-    def disconnect(self):
-        self.ws.close()
-
     def parse_world_update(self, s):
+        updated_cells = set()
+
         # we call handlers before changing any cells, so
         # handlers can print names, check own_ids, ...
-        updated_cells = set()
 
         # ca eats cb
         for i in range(s.pop_uint16()):
@@ -179,10 +209,10 @@ class AgarClient:
             cb = s.pop_uint32()
             self.handle('cell_eaten', eater_id=ca, eaten_id=cb)
             if cb in self.own_ids:  # we got eaten
-                self.own_ids.remove(cb)
-                if not self.own_ids:  # dead, cleanup
-                    self.handle('dead')
+                if len(self.own_ids) <= 1:
+                    self.handle('death')
                     # do not clear cells yet, they still get updated
+                self.own_ids.remove(cb)
             if cb in self.cells:
                 del self.cells[cb]
             updated_cells.add(ca)
@@ -210,6 +240,7 @@ class AgarClient:
             self.cells[cid].update(cid=cid, x=cx, y=cy,
                         size=csize, name=cname, color=color,
                         is_virus=is_virus, is_agitated=is_agitated)
+            self.handle('cell_updated', cid=cid)
             updated_cells.add(cid)
 
         s.pop_uint16()  # padding
@@ -225,6 +256,18 @@ class AgarClient:
                 del self.cells[cid]
                 if cid in self.own_ids:  # own cells joined
                     self.own_ids.remove(cid)
+
+        if self.own_ids:
+            self.total_size = sum(self.cells[oid].size for oid in self.own_ids)
+            self.scale = pow(min(1, 64 / self.total_size), 0.4)
+        # else: keep current scale, also keep size for convenience
+
+        if self.own_ids:
+            left   = min(self.cells[cid].x for cid in self.own_ids)
+            right  = max(self.cells[cid].x for cid in self.own_ids)
+            top    = min(self.cells[cid].y for cid in self.own_ids)
+            bottom = max(self.cells[cid].y for cid in self.own_ids)
+            self.center = (left + right) / 2, (top + bottom) / 2
 
         self.handle('world_update_post')
 
@@ -253,8 +296,10 @@ class AgarClient:
 
     def parse_own_id(self, s):  # new cell ID, respawned or split
         cid = s.pop_uint32()
-        if not self.own_ids:
-            self.cells.clear()
+        if not self.own_ids:  # respawned
+            self.reset_world()
+        else:
+            self.total_size = sum(self.cells[oid].size for oid in self.own_ids)
         self.cells[cid].name = self.nick
         self.own_ids.add(cid)
         self.handle('own_id', cid=cid)
@@ -264,12 +309,14 @@ class AgarClient:
         top = s.pop_float64()
         right = s.pop_float64()
         bottom = s.pop_float64()
+        # if the world was not square, we would have to change a lot
         assert right - left == bottom - top, 'World is not square'
         self.handle('world_rect', left=left, top=top, right=right, bottom=bottom)
         self.world_size = right - left
 
     def parse_hello(self, s):  # "HelloHelloHello", initial connection setup
         self.handle('hello')
+        self.send_handshake()
 
     def parse_17(self, s):
         x = s.pop_float32()
@@ -281,12 +328,13 @@ class AgarClient:
         self.handle('20')
 
     def send_struct(self, fmt, *data):
-        self.ws.send(struct.pack(fmt, *data))
+        if self.ws.connected:
+            self.ws.send(struct.pack(fmt, *data))
 
     def send_handshake(self):
         self.send_struct('<BI', 255, 1)
 
-    def send_restart(self, nick=None):
+    def send_respawn(self, nick=None):
         if nick is not None:
             self.nick = nick
         self.nick = str(self.nick)
