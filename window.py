@@ -228,7 +228,9 @@ class AgarWindow:
                 c.stroke()
 
         # cells
-        for cell in self.client.cells.values():
+        # normal: show large over small, debug: show small over large
+        for cell in sorted(self.client.cells.values(),
+                key=lambda cell: cell.size, reverse=self.show_debug):
             x, y = self.world_to_screen_pos(pos_xy(cell))
             # circle
             c.set_source_rgba(*to_rgba(cell.color, .8))
