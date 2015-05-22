@@ -121,7 +121,7 @@ class LoggingHandler(Handler):
                               w.LOG_W/log_char_w))
         num_log_lines = min(len(log), int(w.win_h / log_line_h))
 
-        y_start = w.win_h - 3
+        y_start = w.win_h - num_log_lines*log_line_h + 9
 
         c.set_source_rgba(0,0,0, .3)
         c.rectangle(0, w.win_h - num_log_lines*log_line_h,
@@ -129,7 +129,7 @@ class LoggingHandler(Handler):
         c.fill()
 
         for i, text in enumerate(log[-num_log_lines:]):
-            draw_text_left(c, (0, y_start - i*log_line_h),
+            draw_text_left(c, (0, y_start + i*log_line_h),
                            text, size=10, face='monospace')
 
 class AgarWindow:
@@ -275,15 +275,17 @@ class AgarWindow:
         self.client.handle('draw', c=c, w=self)
 
         # leaderboard
+        lb_x = self.win_w - self.LOG_W
+
         c.set_source_rgba(0,0,0, .6)
-        c.rectangle(self.win_w, 0,
+        c.rectangle(lb_x - 10, 0,
                     self.LOG_W, 21*len(self.client.leaderboard_names))
         c.fill()
 
         for i, (points, name) in enumerate(self.client.leaderboard_names):
             name = name or 'An unnamed cell'
             text = '%i. %s (%s)' % (i+1, name, points)
-            draw_text_left(c, (self.win_w + 10, 20*(i+1)), text)
+            draw_text_left(c, (lb_x, 20*(i+1)), text)
 
     def tick(self, drawing_area):
         self.client.handle('tick')
