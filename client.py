@@ -355,6 +355,7 @@ class AgarClient:
             self.ws.send(struct.pack(fmt, *data))
 
     def send_handshake(self):
+        self.send_struct('<BI', 254, 1)
         self.send_struct('<BI', 255, 1)
 
     def send_respawn(self, nick=None):
