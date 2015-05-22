@@ -1,24 +1,6 @@
 import random
 from gi.repository import Gtk, GLib, Gdk
-from client import AgarClient, Handler
-
-special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
-                'germany;ukraine;france;sweden;hitler;north korea;' \
-                'south korea;japan;united kingdom;earth;greece;latvia;' \
-                'lithuania;estonia;finland;norway;cia;maldivas;austria;' \
-                'nigeria;reddit;yaranaika;confederate;9gag;indiana;4chan;' \
-                'italy;ussr;bulgaria;tumblr;2ch.hk;hong kong;portugal;' \
-                'jamaica;german empire;mexico;sanik;switzerland;croatia;' \
-                'chile;indonesia;bangladesh;thailand;iran;iraq;peru;moon;' \
-                'botswana;bosnia;netherlands;european union;taiwan;pakistan;' \
-                'hungary;satanist;qing dynasty;nazi;matriarchy;patriarchy;' \
-                'feminism;ireland;texas;facepunch;prodota;cambodia;steam;' \
-                'piccolo;ea;india;kc;denmark;quebec;ayy lmao;sealand;bait;' \
-                'tsarist russia;origin;vinesauce;stalin;belgium;luxembourg;' \
-                'stussy;prussia;8ch;argentina;scotland;sir;romania;belarus;' \
-                'wojak;isis;doge;nasa;byzantium;imperial japan;' \
-                'french kingdom;somalia;turkey;mars;pokerface' \
-    .split(';')
+from client import AgarClient, Handler, special_names
 
 TWOPI = 6.28
 
