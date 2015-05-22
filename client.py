@@ -195,7 +195,7 @@ class AgarClient:
         while self.ws.connected:
             r, w, e = select.select((self.ws.sock, ), (), ())
             if r:
-                self.on_message(self.ws.recv())
+                self.on_message()
             elif e:
                 self.handle('sock_error')
         self.handle('sock_closed')
@@ -205,7 +205,12 @@ class AgarClient:
         self.own_ids.clear()
         self.total_size = 0
 
-    def on_message(self, msg):
+    def on_message(self):
+        try:
+            msg = self.ws.recv()
+        except Exception:
+            self.disconnect()
+            return
         if not msg:
             print('ERROR empty message', file=stderr)
             return

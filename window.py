@@ -167,7 +167,7 @@ class AgarWindow:
 
         # check socket in GTK main loop
         GLib.io_add_watch(self.client.ws, GLib.IO_IN, lambda ws, _:
-                          self.client.on_message(ws.recv()) or True)
+                          self.client.on_message() or True)
         GLib.io_add_watch(self.client.ws, GLib.IO_ERR, lambda _, __:
                           self.client.handle('sock_error') or True)
         GLib.io_add_watch(self.client.ws, GLib.IO_HUP, lambda _, __:
