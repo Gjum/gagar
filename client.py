@@ -100,6 +100,10 @@ def get_url(region='EU-London'):
 class Handler:
     """Base class. `handle()` calls `self.on_<...>`."""
 
+    def __init__(self, client):
+        self.client = client
+        client.add_handler(self)
+
     def handle(self, ident, **data):
         func = getattr(self, 'on_%s' % ident, None)
         if func: func(**data)
@@ -335,6 +339,7 @@ class AgarClient:
     def parse_hello(self, s):  # "HelloHelloHello", initial connection setup
         self.handle('hello')
         self.send_handshake()
+        self.handle('ingame')
 
     def parse_17(self, s):
         x = s.pop_float32()

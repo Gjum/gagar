@@ -49,10 +49,29 @@ def draw_text_left(c, pos, text,
 def pos_xy(o):
     return o.x, o.y
 
+class NativeControlHandler(Handler):
+
+    def __init__(self, client):
+        super().__init__(client)
+        self.mouse_world = 0,0
+
+    def on_key_pressed(self, val, char):
+        if char == 'w':
+            self.client.send_shoot()
+        elif val == Gdk.KEY_space:
+            self.client.send_split()
+
+    def on_mouse_moved(self, pos, pos_world):
+        self.mouse_world = pos_world
+        self.client.send_mouse(*pos_world)
+
+    def on_world_update_post(self):
+        self.client.send_mouse(*self.mouse_world)
+
 class LoggingHandler(Handler):
 
     def __init__(self, client):
-        self.client = client
+        super().__init__(client)
         self.log_msgs = []
 
     def log_msg(self, msg, update=9):
@@ -73,8 +92,8 @@ class LoggingHandler(Handler):
 
     def on_sock_open(self):
         # remove ws:// and :433 part
-        url = self.client.url[5:-4]
-        self.log_msg('Connected as "%s" to %s' % (self.client.nick, url))
+        ip = self.client.url[5:-4]
+        self.log_msg('Connected as "%s" to %s' % (self.client.nick, ip))
 
     def on_cell_eaten(self, eater_id, eaten_id):
         if eaten_id in self.client.own_ids:
@@ -89,22 +108,38 @@ class LoggingHandler(Handler):
         self.log_msg('Size: %i Pos: (%.2f %.2f) (%i%% %i%%)'
                      % (self.client.total_size, x, y, round(px), round(py)))
 
-    def on_death(self):
-        self.client.send_respawn()
-
     def on_own_id(self, cid):
         if len(self.client.own_ids) == 1:
             self.log_msg('Respawned', update=0)
+
+    def on_draw(self, c, w):
+        # scrolling log
+        log_line_h = 12
+        log_char_w = 6  # seems to work with my font
+
+        log = list(format_log(self.log_msgs,
+                              w.LOG_W/log_char_w))
+        num_log_lines = min(len(log), int(w.win_h / log_line_h))
+
+        y_start = w.win_h - 3
+
+        c.set_source_rgba(0,0,0, .3)
+        c.rectangle(0, w.win_h - num_log_lines*log_line_h,
+                    w.LOG_W, num_log_lines*log_line_h)
+        c.fill()
+
+        for i, text in enumerate(log[-num_log_lines:]):
+            draw_text_left(c, (0, y_start - i*log_line_h),
+                           text, size=10, face='monospace')
 
 class AgarWindow:
     LOG_W = 300
 
     def __init__(self):
         self.show_debug = False
-        self.win_w, self.win_h = 1000, (1000-self.LOG_W) * 9/16
-        self.map_w = self.win_w - self.LOG_W
+        self.win_w, self.win_h = 1000, 1000 * 9 / 16
         self.mouse_pos = 0,0
-        self.screen_center = self.map_w / 2, self.win_h / 2
+        self.screen_center = self.win_w / 2, self.win_h / 2
         self.screen_scale = max(self.win_h / 1080, self.win_w / 1920)
 
         self.window = Gtk.Window()
@@ -125,11 +160,10 @@ class AgarWindow:
         self.client = AgarClient()
         self.client.nick = random.choice(special_names)
 
-        self.logging_handler = LoggingHandler(self.client)
-        self.client.add_handler(self.logging_handler)
+        LoggingHandler(self.client)
+        NativeControlHandler(self.client)
 
         self.client.connect()
-        self.logging_handler.log_msg('Press R to respawn', update=0)
 
         # check socket in GTK main loop
         GLib.io_add_watch(self.client.ws, GLib.IO_IN, lambda ws, _:
@@ -148,23 +182,29 @@ class AgarWindow:
         Gtk.main()
 
     def on_key_pressed(self, _, event):
-        key = event.keyval
-        if key == ord('q') or key == Gdk.KEY_Escape:
+        val = event.keyval
+        char = chr(val)
+        if char == 'q' or val == Gdk.KEY_Escape:
             self.client.disconnect()
             Gtk.main_quit()
-        elif key == ord('h'):
+        elif char == 'h':
             self.show_debug = not self.show_debug
-        elif key == ord('r'):
+        elif char == 'r':
             self.client.send_respawn()
-        elif key == ord('w'):
-            self.client.send_shoot()
-        elif key == Gdk.KEY_space:
-            self.client.send_split()
+        elif char == 'c':
+            self.client.disconnect()
+            self.client.connect()
+        elif char == 'k':
+            url = self.client.url
+            self.client.disconnect()
+            self.client.connect(url)
+
+        self.client.handle('key_pressed', val=val, char=char)
 
     def on_mouse_moved(self, _, event):
         self.mouse_pos = pos_xy(event)
-        mouse_world = self.screen_to_world_pos(self.mouse_pos)
-        self.client.send_mouse(*mouse_world)
+        self.client.handle('mouse_moved', pos=self.mouse_pos,
+                           pos_world=self.screen_to_world_pos(self.mouse_pos))
 
     def world_to_screen_pos(self, pos):
         wx, wy = self.client.center
@@ -188,10 +228,10 @@ class AgarWindow:
 
         alloc = self.window.get_allocation()
         self.win_w, self.win_h = alloc.width, alloc.height
-        self.map_w = self.win_w - self.LOG_W
-        self.screen_center = self.map_w / 2, self.win_h / 2
+        self.screen_center = self.win_w / 2, self.win_h / 2
 
-        self.screen_scale = self.client.scale * max(self.win_h / 1080, self.win_w / 1920)
+        self.screen_scale = self.client.scale \
+                            * max(self.win_h / 1080, self.win_w / 1920)
 
         if self.show_debug:
             # world border
@@ -231,36 +271,22 @@ class AgarWindow:
             elif self.show_debug:
                 draw_text_center(c, (x, y), '%i' % cell.size)
 
-        # logging area
-        c.set_source_rgba(0,0,0, .6)
-        c.rectangle(self.map_w,0, self.LOG_W, self.win_h)
-        c.fill()
-
-        infoarea_x = self.map_w + 10
-        space_used = 0
+        # draw handlers
+        self.client.handle('draw', c=c, w=self)
 
         # leaderboard
-        leader_line_h = 20
+        c.set_source_rgba(0,0,0, .6)
+        c.rectangle(self.win_w, 0,
+                    self.LOG_W, 21*len(self.client.leaderboard_names))
+        c.fill()
+
         for i, (points, name) in enumerate(self.client.leaderboard_names):
             name = name or 'An unnamed cell'
             text = '%i. %s (%s)' % (i+1, name, points)
-            space_used += leader_line_h
-            draw_text_left(c, (infoarea_x, space_used), text)
-        space_used += leader_line_h
-
-        # scrolling log
-        log_line_h = 12
-        log_char_w = 6  # seems to work with my font
-        num_log_lines = int((self.win_h - space_used) / log_line_h)
-        log = list(format_log(self.logging_handler.log_msgs,
-                              self.LOG_W/log_char_w))
-        for i, text in enumerate(log[-num_log_lines:]):
-            draw_text_left(c, (infoarea_x, space_used),
-                           text, size=10, face='monospace')
-            space_used += log_line_h
+            draw_text_left(c, (self.win_w + 10, 20*(i+1)), text)
 
     def tick(self, drawing_area):
-        self.client.send_mouse(*self.screen_to_world_pos(self.mouse_pos))
+        self.client.handle('tick')
         drawing_area.queue_draw()
         return True
 
