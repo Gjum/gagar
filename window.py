@@ -194,7 +194,10 @@ class AgarWindow:
 
     def on_key_pressed(self, _, event):
         val = event.keyval
-        char = chr(val)
+        try:
+            char = chr(val)
+        except ValueError:
+            char = ''
         if char == 'q' or val == Gdk.KEY_Escape:
             self.client.disconnect()
             Gtk.main_quit()
