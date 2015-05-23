@@ -133,6 +133,10 @@ class Cell:
         self.is_virus = is_virus
         self.is_agitated = is_agitated
 
+    @property
+    def pos(self):
+        return self.x, self.y
+
 class AgarClient:
     """Talks to a server and maintains the world state."""
 
@@ -241,6 +245,7 @@ class AgarClient:
                     # do not clear cells yet, they still get updated
                 self.own_ids.remove(cb)
             if cb in self.cells:
+                self.handle('cell_removed', cid=cb)
                 del self.cells[cb]
             updated_cells.add(ca)
 
