@@ -68,6 +68,17 @@ class NativeControlHandler(Handler):
     def on_world_update_post(self):
         self.client.send_mouse(*self.mouse_world)
 
+    def on_draw(self, c, w):
+        if w.show_debug:
+            # movement lines
+            for cid in self.client.own_ids:
+                cell = self.client.cells[cid]
+                x, y = w.world_to_screen_pos(pos_xy(cell))
+                c.set_source_rgba(*to_rgba(FUCHSIA, .3))
+                c.move_to(x,y)
+                c.line_to(*w.world_to_screen_pos(self.mouse_world))
+                c.stroke()
+
 class LoggingHandler(Handler):
 
     def __init__(self, client):
@@ -239,15 +250,6 @@ class AgarWindow:
             c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
             c.rectangle(wl, wt, *(self.client.world_size*self.screen_scale,)*2)
             c.stroke()
-
-            # movement lines
-            for cid in self.client.own_ids:
-                cell = self.client.cells[cid]
-                x, y = self.world_to_screen_pos(pos_xy(cell))
-                c.set_source_rgba(*to_rgba(FUCHSIA, .3))
-                c.move_to(x,y)
-                c.line_to(*self.mouse_pos)
-                c.stroke()
 
         # cells
         # normal: show large over small, debug: show small over large
