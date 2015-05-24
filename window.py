@@ -85,7 +85,7 @@ class LoggingHandler(Handler):
         super().__init__(client)
         self.log_msgs = []
 
-    def log_msg(self, msg, update=9):
+    def on_log_msg(self, msg, update=9):
         """
         Updates up to 9th-last msg with new data.
         Compares first 5 chars or up to first space.
@@ -104,24 +104,24 @@ class LoggingHandler(Handler):
     def on_sock_open(self):
         # remove ws:// and :433 part
         ip = self.client.url[5:-4]
-        self.log_msg('Connected as "%s" to %s' % (self.client.nick, ip))
+        self.client.handle('log_msg', msg='Connected as "%s" to %s' % (self.client.nick, ip))
 
     def on_cell_eaten(self, eater_id, eaten_id):
         if eaten_id in self.client.own_ids:
             name = 'Someone'
             if eater_id in self.client.cells:
                 name = '"%s"' % self.client.cells[eater_id].name
-            self.log_msg('%s ate me!' % name)
+            self.client.handle('log_msg', msg='%s ate me!' % name)
 
     def on_world_update_post(self):
         x, y = self.client.center
         px, py = x*100/self.client.world_size, y*100/self.client.world_size
-        self.log_msg('Size: %i Pos: (%.2f %.2f) (%i%% %i%%)'
+        self.client.handle('log_msg', msg='Size: %i Pos: (%.2f %.2f) (%i%% %i%%)'
                      % (self.client.total_size, x, y, round(px), round(py)))
 
     def on_own_id(self, cid):
         if len(self.client.own_ids) == 1:
-            self.log_msg('Respawned', update=0)
+            self.client.handle('log_msg', msg='Respawned', update=0)
 
     def on_draw(self, c, w):
         # scrolling log
