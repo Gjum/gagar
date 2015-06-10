@@ -219,26 +219,26 @@ class AgarClient:
         if not msg:
             print('ERROR empty message', file=stderr)
             return
-        s = BufferStruct(msg)
-        if 240 == s.pop_uint8():
-            s.pop_uint32()  # skip
-        ident = self.packet_dict[s.pop_uint8()]
+        buf = BufferStruct(msg)
+        if 240 == buf.pop_uint8():
+            buf.pop_uint32()  # skip
+        ident = self.packet_dict[buf.pop_uint8()]
         parser = getattr(self, 'parse_%s' % ident, None)
         try:
-            parser(s)
+            parser(buf)
         except BufferUnderflowError as e:
             print('ERROR parsing', ident, 'packet failed:',
                   e.args[0], str(BufferStruct(msg)), file=stderr)
             raise e
 
-    def parse_world_update(self, s):
+    def parse_world_update(self, buf):
         # we call handlers before changing any cells, so
         # handlers can print names, check own_ids, ...
 
         # ca eats cb
-        for i in range(s.pop_uint16()):
-            ca = s.pop_uint32()
-            cb = s.pop_uint32()
+        for i in range(buf.pop_uint16()):
+            ca = buf.pop_uint32()
+            cb = buf.pop_uint32()
             self.handle('cell_eaten', eater_id=ca, eaten_id=cb)
             if cb in self.own_ids:  # we got eaten
                 if len(self.own_ids) <= 1:
@@ -251,21 +251,21 @@ class AgarClient:
 
         # create/update cells
         while 1:
-            cid = s.pop_uint32()
+            cid = buf.pop_uint32()
             if cid == 0: break
-            cx = s.pop_uint16()
-            cy = s.pop_uint16()
-            csize = s.pop_uint16()
-            color = (s.pop_uint8(), s.pop_uint8(), s.pop_uint8())
-            bitmask = s.pop_uint8()
+            cx = buf.pop_uint16()
+            cy = buf.pop_uint16()
+            csize = buf.pop_uint16()
+            color = (buf.pop_uint8(), buf.pop_uint8(), buf.pop_uint8())
+            bitmask = buf.pop_uint8()
             is_virus = bool(bitmask & 1)
             is_agitated = bool(bitmask & 16)
             skips = 0  # lolwtf
             if bitmask & 2: skips += 4
             if bitmask & 4: skips += 8
             if bitmask & 8: skips += 16
-            for i in range(skips): s.pop_uint8()
-            cname = s.pop_str()
+            for i in range(skips): buf.pop_uint8()
+            cname = buf.pop_str()
             self.handle('cell_info', cid=cid, x=cx, y=cy,
                         size=csize, name=cname, color=color,
                         is_virus=is_virus, is_agitated=is_agitated)
@@ -275,8 +275,8 @@ class AgarClient:
             self.handle('cell_updated', cid=cid)
 
         # also keep these non-updated cells
-        for i in range(s.pop_uint32()):
-            cid = s.pop_uint32()
+        for i in range(buf.pop_uint32()):
+            cid = buf.pop_uint32()
             if cid in self.cells:
                 self.handle('cell_removed', cid=cid)
                 del self.cells[cid]
@@ -297,31 +297,31 @@ class AgarClient:
 
         self.handle('world_update_post')
 
-    def parse_leaderboard_names(self, s):
+    def parse_leaderboard_names(self, buf):
         # sent every 500ms
         # only in "free for all" mode
-        n = s.pop_uint32()
+        n = buf.pop_uint32()
         leaderboard_names = []
         for i in range(n):
-            l_id = s.pop_uint32()
-            l_name = s.pop_str()
+            l_id = buf.pop_uint32()
+            l_name = buf.pop_str()
             leaderboard_names.append((l_id, l_name))
         self.handle('leaderboard_names', leaderboard=leaderboard_names)
         self.leaderboard_names = leaderboard_names
 
-    def parse_leaderboard_groups(self, s):
+    def parse_leaderboard_groups(self, buf):
         # sent every 500ms
         # only in group mode
-        n = s.pop_uint32()
+        n = buf.pop_uint32()
         leaderboard_groups = []
         for i in range(n):
-            angle = s.pop_float32()
+            angle = buf.pop_float32()
             leaderboard_groups.append(angle)
         self.handle('leaderboard_groups', angles=leaderboard_groups)
         self.leaderboard_groups = leaderboard_groups
 
-    def parse_own_id(self, s):  # new cell ID, respawned or split
-        cid = s.pop_uint32()
+    def parse_own_id(self, buf):  # new cell ID, respawned or split
+        cid = buf.pop_uint32()
         if not self.own_ids:  # respawned
             self.reset_world()
         else:
@@ -330,28 +330,28 @@ class AgarClient:
         self.own_ids.add(cid)
         self.handle('own_id', cid=cid)
 
-    def parse_world_rect(self, s):  # world size
-        left = s.pop_float64()
-        top = s.pop_float64()
-        right = s.pop_float64()
-        bottom = s.pop_float64()
+    def parse_world_rect(self, buf):  # world size
+        left = buf.pop_float64()
+        top = buf.pop_float64()
+        right = buf.pop_float64()
+        bottom = buf.pop_float64()
         # if the world was not square, we would have to change a lot
         assert right - left == bottom - top, 'World is not square'
         self.handle('world_rect', left=left, top=top, right=right, bottom=bottom)
         self.world_size = right - left
 
-    def parse_hello(self, s):  # "HelloHelloHello", initial connection setup
+    def parse_hello(self, buf):  # "HelloHelloHello", initial connection setup
         self.handle('hello')
         self.send_handshake()
         self.handle('ingame')
 
-    def parse_17(self, s):
-        x = s.pop_float32()
-        y = s.pop_float32()
-        size = s.pop_float32()
+    def parse_17(self, buf):
+        x = buf.pop_float32()
+        y = buf.pop_float32()
+        size = buf.pop_float32()
         self.handle('17', x=x, y=y, size=size)
 
-    def parse_20(self, s):
+    def parse_20(self, buf):
         self.handle('20')
 
     def send_struct(self, fmt, *data):
