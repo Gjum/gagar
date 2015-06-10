@@ -220,6 +220,8 @@ class AgarClient:
             print('ERROR empty message', file=stderr)
             return
         s = BufferStruct(msg)
+        if 240 == s.pop_uint8():
+            s.pop_uint32()  # skip
         ident = self.packet_dict[s.pop_uint8()]
         parser = getattr(self, 'parse_%s' % ident, None)
         try:
@@ -230,8 +232,6 @@ class AgarClient:
             raise e
 
     def parse_world_update(self, s):
-        updated_cells = set()
-
         # we call handlers before changing any cells, so
         # handlers can print names, check own_ids, ...
 
@@ -248,15 +248,14 @@ class AgarClient:
             if cb in self.cells:
                 self.handle('cell_removed', cid=cb)
                 del self.cells[cb]
-            updated_cells.add(ca)
 
         # create/update cells
         while 1:
             cid = s.pop_uint32()
             if cid == 0: break
-            cx = s.pop_float32()
-            cy = s.pop_float32()
-            csize = s.pop_float32()
+            cx = s.pop_uint16()
+            cy = s.pop_uint16()
+            csize = s.pop_uint16()
             color = (s.pop_uint8(), s.pop_uint8(), s.pop_uint8())
             bitmask = s.pop_uint8()
             is_virus = bool(bitmask & 1)
@@ -274,17 +273,11 @@ class AgarClient:
                         size=csize, name=cname, color=color,
                         is_virus=is_virus, is_agitated=is_agitated)
             self.handle('cell_updated', cid=cid)
-            updated_cells.add(cid)
-
-        s.pop_uint16()  # padding
 
         # also keep these non-updated cells
         for i in range(s.pop_uint32()):
-            updated_cells.add(s.pop_uint32())
-
-        # remove dead cells
-        for cid in list(self.cells)[:]:
-            if cid not in updated_cells:
+            cid = s.pop_uint32()
+            if cid in self.cells:
                 self.handle('cell_removed', cid=cid)
                 del self.cells[cid]
                 if cid in self.own_ids:  # own cells joined
