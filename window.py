@@ -53,7 +53,13 @@ class NativeControlHandler(Handler):
 
     def __init__(self, client):
         super().__init__(client)
-        self.mouse_world = 0,0
+        self.movement_delta = 0,0
+
+    @property
+    def mouse_world(self):
+        cx, cy = self.client.center
+        dx, dy = self.movement_delta
+        return cx + dx, cy + dy
 
     def on_key_pressed(self, val, char):
         if char == 'w':
@@ -62,8 +68,10 @@ class NativeControlHandler(Handler):
             self.client.send_split()
 
     def on_mouse_moved(self, pos, pos_world):
-        self.mouse_world = pos_world
-        self.client.send_mouse(*pos_world)
+        wx, wy = pos_world
+        cx, cy = self.client.center
+        self.movement_delta = wx - cx, wy - cy
+        self.client.send_mouse(*self.mouse_world)
 
     def on_world_update_post(self):
         self.client.send_mouse(*self.mouse_world)
