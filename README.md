@@ -27,3 +27,7 @@ TODO
   - can eat you
   - on leaderboard
 - auto-collect nearby cells
+
+---
+
+Licensed under GPLv3.
