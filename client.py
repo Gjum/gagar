@@ -8,7 +8,7 @@ special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'south korea;japan;united kingdom;earth;greece;latvia;' \
                 'lithuania;estonia;finland;norway;cia;maldivas;austria;' \
                 'nigeria;reddit;yaranaika;confederate;9gag;indiana;4chan;' \
-                'italy;ussr;bulgaria;tumblr;2ch.hk;hong kong;portugal;' \
+                'italy;bulgaria;tumblr;2ch.hk;hong kong;portugal;' \
                 'jamaica;german empire;mexico;sanik;switzerland;croatia;' \
                 'chile;indonesia;bangladesh;thailand;iran;iraq;peru;moon;' \
                 'botswana;bosnia;netherlands;european union;taiwan;pakistan;' \
@@ -17,8 +17,9 @@ special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'piccolo;ea;india;kc;denmark;quebec;ayy lmao;sealand;bait;' \
                 'tsarist russia;origin;vinesauce;stalin;belgium;luxembourg;' \
                 'stussy;prussia;8ch;argentina;scotland;sir;romania;belarus;' \
-                'wojak;isis;doge;nasa;byzantium;imperial japan;' \
-                'french kingdom;somalia;turkey;mars;pokerface' \
+                'wojak;doge;nasa;byzantium;imperial japan;' \
+                'french kingdom;somalia;turkey;mars;pokerface;' \
+                'irs;receita federal' \
     .split(';')
 
 WORLD_SIZE = 11180.339887498949  # when writing this, all maps had this size
