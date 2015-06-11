@@ -141,6 +141,8 @@ class AgarClient:
         self.url = url or get_url()
         self.ws.connect(self.url, origin='http://agar.io')
         self.handle('sock_open')
+        self.send_handshake()
+        self.handle('ingame')
 
     def disconnect(self):
         self.ws.close()
@@ -174,8 +176,6 @@ class AgarClient:
             print('ERROR empty message', file=stderr)
             return
         buf = BufferStruct(msg)
-        if 240 == buf.pop_uint8():
-            buf.pop_uint32()  # skip
         ident = self.packet_dict[buf.pop_uint8()]
         parser = getattr(self, 'parse_%s' % ident, None)
         try:
@@ -294,11 +294,6 @@ class AgarClient:
         self.handle('world_rect', left=left, top=top, right=right, bottom=bottom)
         self.world_size = right - left
 
-    def parse_hello(self, buf):  # "HelloHelloHello", initial connection setup
-        self.handle('hello')
-        self.send_handshake()
-        self.handle('ingame')
-
     def parse_17(self, buf):
         x = buf.pop_float32()
         y = buf.pop_float32()
@@ -313,8 +308,8 @@ class AgarClient:
             self.ws.send(struct.pack(fmt, *data))
 
     def send_handshake(self):
-        self.send_struct('<BI', 254, 1)
-        self.send_struct('<BI', 255, 1)
+        self.send_struct('<BI', 254, 4)
+        self.send_struct('<BI', 255, 673720360)
 
     def send_respawn(self, nick=None):
         if nick is not None:
