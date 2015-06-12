@@ -284,6 +284,30 @@ class AgarWindow:
         self.screen_scale = self.client.scale \
                             * max(self.win_h / 1080, self.win_w / 1920)
 
+        # grid
+        c.set_source_rgba(*to_rgba(LIGHTGRAY, .3))
+        line_width = c.get_line_width()
+        c.set_line_width(1)
+        cx, cy = self.client.center
+
+        for y in range(int((cy - 1080*self.screen_scale) / 50) * 50,
+                       int(cy + 1080*self.screen_scale),
+                       50):
+            _, sy = self.world_to_screen_pos((0, y))
+            c.move_to(0, sy)
+            c.line_to(self.win_w, sy)
+            c.stroke()
+
+        for x in range(int((cx - 1920*self.screen_scale) / 50) * 50,
+                       int(cx + 1920*self.screen_scale),
+                       50):
+            sx, _ = self.world_to_screen_pos((x, 0))
+            c.move_to(sx, 0)
+            c.line_to(sx, self.win_h)
+            c.stroke()
+
+        c.set_line_width(line_width)
+
         if self.show_debug:
             # world border
             wl, wt = self.world_to_screen_pos((0,0))
