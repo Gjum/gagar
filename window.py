@@ -45,27 +45,33 @@ def format_log(lines, width, indent='  '):
             l = ind + l[width:]
 
 def draw_text_center(c, center, text, *args, **kwargs):
-    x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
-        = c.text_extents(text)
-    cx, cy = center
-    x = cx - x_bearing - text_width / 2
-    y = cy - y_bearing - text_height / 2
-    draw_text_left(c, (x, y), text, *args, **kwargs)
+    try:
+        x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
+            = c.text_extents(text)
+        cx, cy = center
+        x = cx - x_bearing - text_width / 2
+        y = cy - y_bearing - text_height / 2
+        draw_text_left(c, (x, y), text, *args, **kwargs)
+    except UnicodeEncodeError:
+        pass
 
 def draw_text_left(c, pos, text,
                    color=WHITE, shadow=None, size=12, face='sans'):
-    c.select_font_face(face)
-    c.set_font_size(size)
-    x, y = pos
-    if shadow:
-        s_color, s_offset = shadow
-        s_dx, s_dy = s_offset
-        c.move_to(x + s_dx, y + s_dy)
-        c.set_source_rgba(*s_color)
+    try:
+        c.select_font_face(face)
+        c.set_font_size(size)
+        x, y = pos
+        if shadow:
+            s_color, s_offset = shadow
+            s_dx, s_dy = s_offset
+            c.move_to(x + s_dx, y + s_dy)
+            c.set_source_rgba(*s_color)
+            c.show_text(text)
+        c.move_to(x, y)
+        c.set_source_rgba(*color)
         c.show_text(text)
-    c.move_to(x, y)
-    c.set_source_rgba(*color)
-    c.show_text(text)
+    except UnicodeEncodeError:
+        pass
 
 def pos_xy(o):
     return o.x, o.y
