@@ -137,8 +137,8 @@ class LoggingHandler(Handler):
             print('[LOG]', msg)
 
     def on_sock_open(self):
-        # remove ws:// and :433 part
-        ip = self.client.url[5:-4]
+        # remove ws://
+        ip = self.client.url[5:]
         self.client.handle('log_msg', msg='Connected as "%s" to %s' % (self.client.nick, ip))
 
     def on_cell_eaten(self, eater_id, eaten_id):
