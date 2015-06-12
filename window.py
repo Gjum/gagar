@@ -284,33 +284,28 @@ class AgarWindow:
         self.screen_scale = self.client.scale \
                             * max(self.win_h / 1080, self.win_w / 1920)
 
+        wl, wt = self.world_to_screen_pos((0,0))
+        wr, wb = self.world_to_screen_pos((self.client.world_size,)*2)
+
         # grid
         c.set_source_rgba(*to_rgba(LIGHTGRAY, .3))
         line_width = c.get_line_width()
         c.set_line_width(1)
-        cx, cy = self.client.center
 
-        for y in range(int((cy - 1080*self.screen_scale) / 50) * 50,
-                       int(cy + 1080*self.screen_scale),
-                       50):
-            _, sy = self.world_to_screen_pos((0, y))
-            c.move_to(0, sy)
-            c.line_to(self.win_w, sy)
+        for y in range(int(wt), int(wb), int(50 / self.screen_scale)):
+            c.move_to(wl, y)
+            c.line_to(wr, y)
             c.stroke()
 
-        for x in range(int((cx - 1920*self.screen_scale) / 50) * 50,
-                       int(cx + 1920*self.screen_scale),
-                       50):
-            sx, _ = self.world_to_screen_pos((x, 0))
-            c.move_to(sx, 0)
-            c.line_to(sx, self.win_h)
+        for x in range(int(wl), int(wr), int(50 / self.screen_scale)):
+            c.move_to(x, wt)
+            c.line_to(x, wb)
             c.stroke()
 
         c.set_line_width(line_width)
 
         if self.show_debug:
             # world border
-            wl, wt = self.world_to_screen_pos((0,0))
             c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
             c.rectangle(wl, wt, *(self.client.world_size*self.screen_scale,)*2)
             c.stroke()
