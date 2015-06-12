@@ -138,12 +138,19 @@ class AgarClient:
 
     def connect(self, url=None):
         if self.ws.connected:
-            raise ValueError('Already connected to "%s"', self.url)
+            print('Already connected to "%s"', self.url, file=stderr)
+            return False
+
         self.url = url or get_url()
-        self.ws.connect(self.url, origin='http://agar.io')
+        self.ws.connect(self.url, timeout=1, origin='http://agar.io')
+        if not self.ws.connected:
+            print('Failed to connect to "%s"', self.url, file=stderr)
+            return False
+
         self.handle('sock_open')
         self.send_handshake()
         self.handle('ingame')
+        return True
 
     def disconnect(self):
         self.ws.close()
