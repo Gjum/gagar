@@ -232,6 +232,8 @@ class AgarWindow:
             Gtk.main_quit()
         elif char == 'h':
             self.show_debug = not self.show_debug
+        elif char == 's':
+            self.client.send_spectate()
         elif char == 'r':
             self.client.send_respawn()
         elif char == 'c':

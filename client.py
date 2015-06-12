@@ -102,7 +102,8 @@ class AgarClient:
         49: 'leaderboard_names',
         50: 'leaderboard_groups',
         64: 'world_rect',
-        17: '17', 20: '20',  # never sent by server, no idea what these are for
+        17: 'pos_update',
+        20: 'clear_cells',
     }
 
     def __init__(self):
@@ -294,14 +295,17 @@ class AgarClient:
         self.handle('world_rect', left=left, top=top, right=right, bottom=bottom)
         self.world_size = right - left
 
-    def parse_17(self, buf):
+    def parse_pos_update(self, buf):
         x = buf.pop_float32()
         y = buf.pop_float32()
-        size = buf.pop_float32()
-        self.handle('17', x=x, y=y, size=size)
+        size = self.total_size = buf.pop_float32()
+        self.center = x, y
+        self.scale = pow(min(1, 64 / size), 0.4)
+        self.handle('pos_update', x=x, y=y, size=size)
 
-    def parse_20(self, buf):
-        self.handle('20')
+    def parse_clear_cells(self, buf):
+        self.handle('clear_cells')
+        self.cells.clear()
 
     def send_struct(self, fmt, *data):
         if self.ws.connected:
