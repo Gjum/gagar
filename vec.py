@@ -8,7 +8,7 @@ import math
 class Vec(object):
     __slots__ = ('x', 'y')
 
-    def __init__(self, x=(0,0), y=None):
+    def __init__(self, x=(0, 0), y=None):
         if y is not None:
             self.x = x
             self.y = y
@@ -38,6 +38,7 @@ class Vec(object):
     def __add__(self, v):
         return self.copy().iadd(v)
 
+    __radd__ = __add__
     __iadd__ = iadd
 
     def isub(self, v):
@@ -45,10 +46,12 @@ class Vec(object):
         self.y -= v.y
         return self
 
+    __isub__ = isub
+
     def __sub__(self, v):
         return self.copy().isub(v)
 
-    __isub__ = isub
+    __rsub__ = __sub__
 
     def imul(self, s):
         self.x *= s
@@ -60,6 +63,8 @@ class Vec(object):
             self, s = s, self
         return self.copy().imul(s)
 
+    __rmul__ = __mul__
+
     def __imul__(self, s):
         if not isinstance(self, Vec):
             self, s = s, self
@@ -70,10 +75,14 @@ class Vec(object):
         self.y /= s
         return self
 
+    __idiv__ = idiv
+
     def __div__(self, s):
         return self.copy().idiv(s)
 
-    __idiv__ = idiv
+    __rdiv__ = __div__
+    __truediv__ = __div__
+    __rtruediv__ = __div__
 
     def dot(self, v):
         return self.x * v.x + self.y * v.y
@@ -171,6 +180,10 @@ class Vec(object):
         if key == 1 or key == "y":
             self.y = value
         raise IndexError
+
+    def __iter__(self):
+        yield self.x
+        yield self.y
 
     def __str__(self):
         return "Vec(%.3f, %.3f)" % tuple(self)
