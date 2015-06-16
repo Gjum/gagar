@@ -56,3 +56,34 @@ class Subscriber(object):
     def on_event(self, event, **data):
         func = getattr(self, 'on_%s' % event, None)
         if func: func(**data)
+
+
+class Collector(object):
+    """ Collects events from multiple channels and broadcasts them into one. """
+
+    def __init__(self, output, *inputs):
+        self.output = output
+        self.inputs = inputs
+        for channel in self.inputs:
+            channel.subscribe(self)
+
+    def set_inputs(self, inputs):
+        for channel in self.inputs:
+            channel.unsubscribe(self)
+        self.inputs = inputs
+        for channel in self.inputs:
+            channel.subscribe(self)
+
+    def on_event(self, event, **data):
+        self.output.broadcast(event, **data)
+
+
+class Distributor(object):
+    """ Passes any event to multiple channels. """
+
+    def __init__(self, *channels):
+        self.channels = channels
+
+    def on_event(self, event, **data):
+        for channel in self.channels:
+            channel.broadcast(event, **data)
