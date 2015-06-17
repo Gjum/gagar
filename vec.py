@@ -84,6 +84,14 @@ class Vec(object):
     __truediv__ = __div__
     __rtruediv__ = __div__
 
+    def ivdiv(self, v):
+        self.x /= v.x
+        self.y /= v.y
+        return self
+
+    def vdiv(self, v):
+        return self.copy().ivdiv(v)
+
     def dot(self, v):
         return self.x * v.x + self.y * v.y
 
