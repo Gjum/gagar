@@ -21,19 +21,48 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 
 import random
 from gi.repository import Gtk, GLib, Gdk
-from client import AgarClient, Handler, special_names
+from client import Client, special_names
+from drawing_helpers import *
+from event import Channel, Subscriber
+from vec import Vec
 
-TWOPI = 6.28
 
-def to_rgba(c, a):
-    return c[0], c[1], c[2], a
+class NativeControl(Subscriber):
+    def __init__(self, channel, client):
+        super(NativeControl, self).__init__(channel)
+        self.client = client
+        self.movement_delta = Vec()
 
-BLACK = (0,0,0)
-WHITE = (1,1,1)
-DARKGRAY = (.2,)*3
-LIGHTGRAY = (.7,)*3
-BLUE = (.2,.2,1)
-FUCHSIA = (1,0,1)
+    @property
+    def mouse_world(self):
+        return self.client.player.center + self.movement_delta
+
+    def on_world_update_post(self):
+        self.client.send_mouse(*self.mouse_world)
+
+    def on_mouse_moved(self, pos, pos_world):
+        self.movement_delta = pos_world - self.client.player.center
+        self.client.send_mouse(*self.mouse_world)
+
+    def on_key_pressed(self, val, char):
+        if char == 'w':
+            self.client.send_mouse(*self.mouse_world)
+            self.client.send_shoot()
+        elif val == Gdk.KEY_space:
+            self.client.send_mouse(*self.mouse_world)
+            self.client.send_split()
+
+    def on_draw(self, c, w):
+        if w.show_debug:
+            # movement lines
+            for cid in self.client.player.own_ids:
+                cell = self.client.world.cells[cid]
+                x, y = w.world_to_screen_pos(cell.pos)
+                c.set_source_rgba(*to_rgba(FUCHSIA, .3))
+                c.move_to(x, y)
+                c.line_to(*w.world_to_screen_pos(self.mouse_world))
+                c.stroke()
+
 
 def format_log(lines, width, indent='  '):
     width = int(width)
@@ -44,80 +73,11 @@ def format_log(lines, width, indent='  '):
             ind = indent
             l = ind + l[width:]
 
-def draw_text_center(c, center, text, *args, **kwargs):
-    try:
-        x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
-            = c.text_extents(text)
-        cx, cy = center
-        x = cx - x_bearing - text_width / 2
-        y = cy - y_bearing - text_height / 2
-        draw_text_left(c, (x, y), text, *args, **kwargs)
-    except UnicodeEncodeError:
-        pass
 
-def draw_text_left(c, pos, text,
-                   color=WHITE, shadow=None, size=12, face='sans'):
-    try:
-        c.select_font_face(face)
-        c.set_font_size(size)
-        x, y = pos
-        if shadow:
-            s_color, s_offset = shadow
-            s_dx, s_dy = s_offset
-            c.move_to(x + s_dx, y + s_dy)
-            c.set_source_rgba(*s_color)
-            c.show_text(text)
-        c.move_to(x, y)
-        c.set_source_rgba(*color)
-        c.show_text(text)
-    except UnicodeEncodeError:
-        pass
-
-def pos_xy(o):
-    return o.x, o.y
-
-class NativeControlHandler(Handler):
-
-    def __init__(self, client):
-        super().__init__(client)
-        self.movement_delta = 0,0
-
-    @property
-    def mouse_world(self):
-        cx, cy = self.client.center
-        dx, dy = self.movement_delta
-        return cx + dx, cy + dy
-
-    def on_key_pressed(self, val, char):
-        if char == 'w':
-            self.client.send_shoot()
-        elif val == Gdk.KEY_space:
-            self.client.send_split()
-
-    def on_mouse_moved(self, pos, pos_world):
-        wx, wy = pos_world
-        cx, cy = self.client.center
-        self.movement_delta = wx - cx, wy - cy
-        self.client.send_mouse(*self.mouse_world)
-
-    def on_world_update_post(self):
-        self.client.send_mouse(*self.mouse_world)
-
-    def on_draw(self, c, w):
-        if w.show_debug:
-            # movement lines
-            for cid in self.client.own_ids:
-                cell = self.client.cells[cid]
-                x, y = w.world_to_screen_pos(pos_xy(cell))
-                c.set_source_rgba(*to_rgba(FUCHSIA, .3))
-                c.move_to(x,y)
-                c.line_to(*w.world_to_screen_pos(self.mouse_world))
-                c.stroke()
-
-class LoggingHandler(Handler):
-
-    def __init__(self, client):
-        super().__init__(client)
+class Logger(Subscriber):
+    def __init__(self, channel, client):
+        super(Logger, self).__init__(channel)
+        self.client = client
         self.log_msgs = []
 
     def on_log_msg(self, msg, update=9):
@@ -130,7 +90,7 @@ class LoggingHandler(Handler):
         for i, log_msg in enumerate(reversed(
                 self.log_msgs[-update:] if update else [])):
             if msg[:first_space] == log_msg[:first_space]:
-                self.log_msgs[-i-1] = msg
+                self.log_msgs[-i - 1] = msg
                 break
         else:
             self.log_msgs.append(msg)
@@ -139,24 +99,26 @@ class LoggingHandler(Handler):
     def on_sock_open(self):
         # remove ws://
         ip = self.client.url[5:]
-        self.client.handle('log_msg', msg='Connected as "%s" to %s' % (self.client.nick, ip))
+        self.client.channel.broadcast('log_msg', msg='Connected as "%s" to %s'
+                                      % (self.client.player.nick, ip))
 
     def on_cell_eaten(self, eater_id, eaten_id):
-        if eaten_id in self.client.own_ids:
+        if eaten_id in self.client.player.own_ids:
             name = 'Someone'
-            if eater_id in self.client.cells:
-                name = '"%s"' % self.client.cells[eater_id].name
-            self.client.handle('log_msg', msg='%s ate me!' % name)
+            if eater_id in self.client.world.cells:
+                name = '"%s"' % self.client.world.cells[eater_id].name
+            self.client.channel.broadcast('log_msg', msg='%s ate me!' % name)
 
     def on_world_update_post(self):
-        x, y = self.client.center
-        px, py = x*100/self.client.world_size, y*100/self.client.world_size
-        self.client.handle('log_msg', msg='Size: %i Pos: (%.2f %.2f) (%i%% %i%%)'
-                     % (self.client.total_size, x, y, round(px), round(py)))
+        x, y = self.client.player.center
+        px, py = (self.client.player.center * 100.0).ivdiv(self.client.world.size)
+        msg = 'Size: %i Pos: (%.2f %.2f) (%i%% %i%%)' \
+              % (self.client.player.total_size, x, y, round(px), round(py))
+        self.client.channel.broadcast('log_msg', msg=msg)
 
     def on_own_id(self, cid):
-        if len(self.client.own_ids) == 1:
-            self.client.handle('log_msg', msg='Respawned', update=0)
+        if len(self.client.player.own_ids) == 1:
+            self.client.channel.broadcast('log_msg', msg='Respawned', update=0)
 
     def on_draw(self, c, w):
         # scrolling log
@@ -164,7 +126,7 @@ class LoggingHandler(Handler):
         log_char_w = 6  # seems to work with my font
 
         log = list(format_log(self.log_msgs,
-                              w.LOG_W/log_char_w))
+                              w.LOG_W / log_char_w))
         num_log_lines = min(len(log), int(w.win_h / log_line_h))
 
         y_start = w.win_h - num_log_lines*log_line_h + 9
@@ -178,15 +140,16 @@ class LoggingHandler(Handler):
             draw_text_left(c, (0, y_start + i*log_line_h),
                            text, size=10, face='monospace')
 
+
 class AgarWindow:
     LOG_W = 300
 
     def __init__(self):
         self.show_debug = False
-        self.win_w, self.win_h = 1000, 1000 * 9 / 16
-        self.mouse_pos = 0,0
-        self.screen_center = self.win_w / 2, self.win_h / 2
-        self.screen_scale = max(self.win_h / 1080, self.win_w / 1920)
+        self.win_w, self.win_h = self.win_size = Vec(1000, 1000 * 9 / 16)
+        self.mouse_pos = Vec()
+        self.screen_center = self.win_size / 2
+        self.screen_scale = max(self.win_w / 1920, self.win_h / 1080)
 
         self.window = Gtk.Window()
         self.window.set_title('agar.io')
@@ -203,21 +166,24 @@ class AgarWindow:
 
         GLib.timeout_add(50, self.tick, drawing_area)
 
-        self.client = AgarClient()
-        self.client.nick = random.choice(special_names)
+        self.client = Client()
+        self.client.player.nick = random.choice(special_names)
 
-        LoggingHandler(self.client)
-        NativeControlHandler(self.client)
+        Logger(self.client.channel, self.client)
+        NativeControl(self.client.channel, self.client)
 
         self.client.connect()
+        # self.client.connect('ws://localhost:443')
+        # self.client.connect('ws://213.168.251.152:443')
 
-        # check socket in GTK main loop
+        # watch socket in GTK main loop
+        # `or True` is for always returning True to keep watching
         GLib.io_add_watch(self.client.ws, GLib.IO_IN, lambda ws, _:
                           self.client.on_message() or True)
         GLib.io_add_watch(self.client.ws, GLib.IO_ERR, lambda _, __:
-                          self.client.handle('sock_error') or True)
+                          self.client.channel.broadcast('sock_error') or True)
         GLib.io_add_watch(self.client.ws, GLib.IO_HUP, lambda _, __:
-                          self.client.handle('sock_closed') or True)
+                          self.client.disconnect() or True)
 
         self.window.show_all()
 
@@ -250,108 +216,107 @@ class AgarWindow:
             self.client.disconnect()
             self.client.connect(url)
 
-        self.client.handle('key_pressed', val=val, char=char)
+        self.client.channel.broadcast('key_pressed', val=val, char=char)
 
     def on_mouse_moved(self, _, event):
-        self.mouse_pos = pos_xy(event)
-        self.client.handle('mouse_moved', pos=self.mouse_pos,
-                           pos_world=self.screen_to_world_pos(self.mouse_pos))
+        self.mouse_pos.set(event.x, event.y)
+        self.client.channel.broadcast('mouse_moved', pos=self.mouse_pos,
+                                      pos_world=self.screen_to_world_pos(
+                                          self.mouse_pos))
 
     def world_to_screen_pos(self, pos):
-        wx, wy = self.client.center
-        sx, sy = self.screen_center
-        x, y = pos
-        x = (x-wx) * self.screen_scale + sx
-        y = (y-wy) * self.screen_scale + sy
-        return x, y
+        return self.screen_center \
+               + (self.screen_scale * (pos - self.client.player.center))
 
     def screen_to_world_pos(self, pos):
-        wx, wy = self.client.center
-        sx, sy = self.screen_center
-        x, y = pos
-        x = (x-sx) * self.screen_scale + wx
-        y = (y-sy) * self.screen_scale + wy
-        return x, y
+        return self.client.player.center \
+               + (self.screen_scale * (pos - self.screen_center))
 
     def draw(self, _, c):
         c.set_source_rgba(*DARKGRAY)
         c.paint()
 
+        # window may have been resized
         alloc = self.window.get_allocation()
         self.win_w, self.win_h = alloc.width, alloc.height
-        self.screen_center = self.win_w / 2, self.win_h / 2
+        self.win_size.set(self.win_w, self.win_h)
+        self.screen_center = self.win_size / 2
+        self.screen_scale = self.client.player.scale \
+                            * max(self.win_w / 1920, self.win_h / 1080)
 
-        self.screen_scale = self.client.scale \
-                            * max(self.win_h / 1080, self.win_w / 1920)
+        # XXX show whole world
+        # self.screen_scale = min(self.win_h / self.world_size,
+        #                         self.win_w / self.world_size)
+        # self.world_center = self.world_size / 2
 
-        wl, wt = self.world_to_screen_pos((0,0))
-        wr, wb = self.world_to_screen_pos((self.client.world_size,)*2)
+        wl, wt = self.world_to_screen_pos(Vec())
+        wr, wb = self.world_to_screen_pos(self.client.world.size)
 
         # grid
         c.set_source_rgba(*to_rgba(LIGHTGRAY, .3))
         line_width = c.get_line_width()
-        c.set_line_width(1)
+        c.set_line_width(.5)
 
-        for y in range(int(wt), int(wb), int(50 / self.screen_scale)):
+        for y in range(int(wt), int(wb), int(50 * self.screen_scale)):
             c.move_to(wl, y)
             c.line_to(wr, y)
             c.stroke()
 
-        for x in range(int(wl), int(wr), int(50 / self.screen_scale)):
+        for x in range(int(wl), int(wr), int(50 * self.screen_scale)):
             c.move_to(x, wt)
             c.line_to(x, wb)
             c.stroke()
 
-        c.set_line_width(line_width)
+        # world border
+        c.set_line_width(4)
+        c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
+        c.rectangle(wl, wt, *(self.client.world.size * self.screen_scale))
+        c.stroke()
 
-        if self.show_debug:
-            # world border
-            c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
-            c.rectangle(wl, wt, *(self.client.world_size*self.screen_scale,)*2)
-            c.stroke()
+        c.set_line_width(line_width)
 
         # cells
         # normal: show large over small, debug: show small over large
-        for cell in sorted(self.client.cells.values(),
+        for cell in sorted(self.client.world.cells.values(),
                 key=lambda cell: cell.size, reverse=self.show_debug):
-            x, y = self.world_to_screen_pos(pos_xy(cell))
-            # circle
-            c.set_source_rgba(*to_rgba(cell.color, .8))
-            c.arc(x, y, cell.size * self.screen_scale, 0, TWOPI)
-            c.fill()
+            x, y = pos = self.world_to_screen_pos(cell.pos)
+            draw_circle(c, pos, cell.size * self.screen_scale,
+                        color=to_rgba(cell.color, .8))
             # name, size
             if cell.is_virus or cell.size < 20:  # food <= 11 < 30 <= cells
                 pass  # do not draw name/size
             elif cell.is_agitated and self.show_debug:
-                draw_text_center(c, (x, y), '(agitated)')
-                draw_text_center(c, (x, y+12), '%i' % cell.size)
+                draw_text_center(c, pos, '(agitated)')
+                draw_text_center(c, (x, y + 12), '%i' % cell.size)
             elif cell.name:
-                draw_text_center(c, (x, y), '%s' % cell.name)
+                draw_text_center(c, pos, '%s' % cell.name)
                 if self.show_debug:
-                    draw_text_center(c, (x, y+12), '%i' % cell.size)
+                    draw_text_center(c, (x, y + 12), '%i' % cell.size)
             elif self.show_debug:
-                draw_text_center(c, (x, y), '%i' % cell.size)
+                draw_text_center(c, pos, '%i' % cell.size)
 
         # draw handlers
-        self.client.handle('draw', c=c, w=self)
+        self.client.channel.broadcast('draw', c=c, w=self)
 
         # leaderboard
         lb_x = self.win_w - self.LOG_W
 
         c.set_source_rgba(0,0,0, .6)
         c.rectangle(lb_x - 10, 0,
-                    self.LOG_W, 21*len(self.client.leaderboard_names))
+                    self.LOG_W, 21 * len(self.client.world.leaderboard_names))
         c.fill()
 
-        for i, (points, name) in enumerate(self.client.leaderboard_names):
+        for i, (points, name) in enumerate(self.client.world.leaderboard_names):
             name = name or 'An unnamed cell'
             text = '%i. %s (%s)' % (i+1, name, points)
             draw_text_left(c, (lb_x, 20*(i+1)), text)
 
     def tick(self, drawing_area):
-        self.client.handle('tick')
+        # TODO no ticking, only draw when server sends world update
+        self.client.channel.broadcast('tick')
         drawing_area.queue_draw()
         return True
+
 
 if __name__ == '__main__':
     print('Copyright (C) 2015  Gjum  <code.gjum@gmail.com>')
