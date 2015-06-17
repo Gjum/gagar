@@ -103,27 +103,27 @@ class Player(object):
         self.world = World()
         self.own_ids = set()
         self.nick = ''
+        self.scale = 1
         self.center = self.world.size / 2
-        self.last_scale = 1
+        self.total_size = 0
 
-    def reset(self):
-        # xxx
-        self.own_ids.clear()
+    def cells_changed(self):
+        self.total_size = sum(cell.size for cell in self.own_cells)
+        self.scale = pow(min(1, 64 / self.total_size), 0.4) \
+            if self.total_size > 0 else 1
+
+        if self.own_ids:
+            left   = min(cell.pos.x for cell in self.own_cells)
+            right  = max(cell.pos.x for cell in self.own_cells)
+            top    = min(cell.pos.y for cell in self.own_cells)
+            bottom = max(cell.pos.y for cell in self.own_cells)
+            self.center = Vec(left + right, top + bottom) / 2
+        # else: keep old center
 
     @property
     def own_cells(self):
         cells = self.world.cells
-        return map(lambda cid: cells[cid], self.own_ids)
-
-    @property
-    def total_size(self):
-        return sum(cell.size for cell in self.own_cells)
-
-    @property
-    def scale(self):
-        if self.is_alive:
-            self.last_scale = pow(min(1, 64 / self.total_size), 0.4)
-        return self.last_scale
+        return (cells[cid] for cid in self.own_ids)
 
     @property
     def is_alive(self):
@@ -178,14 +178,13 @@ class Client(object):
             return False
 
         self.send_handshake()
-        self.player.world = self.world = World()
+        self.world = self.player.world = World()
         self.channel.broadcast('ingame')
         return True
 
     def disconnect(self):
         self.ws.close()
         self.channel.broadcast('sock_closed')
-        self.player.reset()
 
     def listen(self):
         """Set up a quick connection. Returns on disconnect."""
@@ -273,13 +272,7 @@ class Client(object):
                 if cid in player.own_ids:  # own cells joined
                     player.own_ids.remove(cid)
 
-        own_cells = list(player.own_cells)
-        if own_cells:
-            left   = min(cell.pos.x for cell in own_cells)
-            right  = max(cell.pos.x for cell in own_cells)
-            top    = min(cell.pos.y for cell in own_cells)
-            bottom = max(cell.pos.y for cell in own_cells)
-            player.center = Vec(left + right, top + bottom) / 2
+        player.cells_changed()
 
         self.channel.broadcast('world_update_post')
 
@@ -309,11 +302,13 @@ class Client(object):
     def parse_own_id(self, buf):  # new cell ID, respawned or split
         cid = buf.pop_uint32()
         player = self.player
-        if not player.own_ids:  # respawned
-            player.reset()
+        if not player.is_alive:  # respawned
+            player.own_ids.clear()
+            self.channel.broadcast('respawn')
         # server sends empty name, assumes we set it here
         self.world.cells[cid].name = player.nick
         player.own_ids.add(cid)
+        player.cells_changed()
         self.channel.broadcast('own_id', cid=cid)
 
     def parse_world_rect(self, buf):  # world size
@@ -333,15 +328,16 @@ class Client(object):
         y = buf.pop_float32()
         scale = buf.pop_float32()
         self.player.center.set(x, y)
-        self.player.last_scale = scale
+        self.player.scale = scale
         self.channel.broadcast('spectate_update',
                                pos=self.player.center, scale=scale)
 
     def parse_clear_cells(self, buf):
         # TODO clear cells packet is untested
         self.channel.broadcast('clear_cells')
-        self.player.own_ids.clear()
         self.world.cells.clear()
+        self.player.own_ids.clear()
+        self.player.cells_changed()
 
     def send_struct(self, fmt, *data):
         if self.ws.connected:

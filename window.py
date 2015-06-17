@@ -135,8 +135,7 @@ class Logger(Subscriber):
         log_line_h = 12
         log_char_w = 6  # seems to work with my font
 
-        log = list(format_log(self.log_msgs,
-                              w.LOG_W / log_char_w))
+        log = list(format_log(self.log_msgs, w.LOG_W / log_char_w))
         num_log_lines = min(len(log), int(w.win_h / log_line_h))
 
         y_start = w.win_h - num_log_lines*log_line_h + 9
@@ -233,12 +232,12 @@ class AgarWindow:
                                 pos_world=self.screen_to_world_pos(mouse_pos))
 
     def world_to_screen_pos(self, pos):
-        return self.screen_center \
-               + ((pos - self.client.player.center) * self.screen_scale)
+        return (pos - self.client.player.center) \
+            .imul(self.screen_scale).iadd(self.screen_center)
 
     def screen_to_world_pos(self, pos):
-        return self.client.player.center \
-               + ((pos - self.screen_center) / self.screen_scale)
+        return (pos - self.screen_center) \
+            .idiv(self.screen_scale).iadd(self.client.player.center)
 
     def draw(self, _, c):
         c.set_source_rgba(*DARKGRAY)

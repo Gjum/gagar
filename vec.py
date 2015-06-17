@@ -99,7 +99,7 @@ class Vec(object):
         return self.x * v.y - v.x * self.y
 
     def lensq(self):
-        return self.dot(self)
+        return self.x * self.x + self.y * self.y
 
     def len(self):
         return math.sqrt(self.lensq())
