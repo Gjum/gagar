@@ -21,6 +21,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 
 import random
 from gi.repository import Gtk, GLib, Gdk
+from bot import Bot
 from client import Client, special_names
 from drawing_helpers import *
 from event import Channel, Subscriber
@@ -179,11 +180,9 @@ class AgarWindow:
         self.client.player.nick = random.choice(special_names)
 
         Logger(self.client.channel, self.client)
-        NativeControl(self.client.channel, self.client)
+        Bot(self.client.channel, self.client)
 
         self.client.connect()
-        # self.client.connect('ws://localhost:443')
-        # self.client.connect('ws://213.168.251.152:443')
 
         # watch socket in GTK main loop
         # `or True` is for always returning True to keep watching
