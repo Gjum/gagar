@@ -104,7 +104,7 @@ class Player(object):
         self.own_ids = set()
         self.nick = ''
         self.center = self.world.size / 2
-        self.last_size = 1
+        self.last_scale = 1
 
     def reset(self):
         # xxx
@@ -117,14 +117,13 @@ class Player(object):
 
     @property
     def total_size(self):
-        sum_sizes = sum(cell.size for cell in self.own_cells)
-        if sum_sizes > 0:
-            self.last_size = sum_sizes
-        return self.last_size
+        return sum(cell.size for cell in self.own_cells)
 
     @property
     def scale(self):
-        return pow(min(1, 64 / self.total_size), 0.4)
+        if self.is_alive:
+            self.last_scale = pow(min(1, 64 / self.total_size), 0.4)
+        return self.last_scale
 
     @property
     def is_alive(self):
@@ -332,10 +331,11 @@ class Client(object):
         # only in spectate mode
         x = buf.pop_float32()
         y = buf.pop_float32()
-        size = buf.pop_float32()
+        scale = buf.pop_float32()
         self.player.center.set(x, y)
-        self.player.last_size = size
-        self.channel.broadcast('spectate_update', x=x, y=y, size=size)
+        self.player.last_scale = scale
+        self.channel.broadcast('spectate_update',
+                               pos=self.player.center, scale=scale)
 
     def parse_clear_cells(self, buf):
         # TODO clear cells packet is untested
