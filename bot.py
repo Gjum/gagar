@@ -7,21 +7,7 @@ from vec import Vec
 # TODO weighted distraction from can_eat
 
 def nearest_from(pos, cells):
-    def dist(c):
-        return (pos - c.pos).lensq(), c
-    cells_widths = map(dist, cells)
-    try:
-        return sorted(cells_widths)
-    except TypeError:  # unorderable types: Cell() < Cell()
-        # two cells have same distance, to mitigate also sort by cell ID
-        def h(wc):
-            w, c = wc
-            i = c.cid
-            return w, i, c
-        def k(wic):
-            w, i, c = wic
-            return w, c
-        return list(map(h, sorted(map(k, cells_widths))))
+    return sorted(((pos - c.pos).lensq(), c) for c in cells)
 
 class CellInfo:
     def __init__(self, cell):
@@ -147,10 +133,10 @@ class Bot(Subscriber):
         #    maybe in can_splitkill
 
         if not eatable:
-            return
+            return  # TODO find any target
 
-        depth = 5
-        breadth = 5
+        depth = 3
+        breadth = 4
 
         paths = [(0, [cell]) for cell in player.own_cells]
         for i in range(min(len(eatable), depth)):
