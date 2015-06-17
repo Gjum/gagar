@@ -27,6 +27,12 @@ from event import Channel, Subscriber
 from vec import Vec
 
 
+def frange(start, end, step):
+    while start < end:
+        yield start
+        start += step
+
+
 class NativeControl(Subscriber):
     def __init__(self, channel, client):
         super(NativeControl, self).__init__(channel)
@@ -37,30 +43,34 @@ class NativeControl(Subscriber):
     def mouse_world(self):
         return self.client.player.center + self.movement_delta
 
-    def on_world_update_post(self):
+    def send_mouse(self):
         self.client.send_mouse(*self.mouse_world)
+
+    def on_world_update_post(self):
+        self.send_mouse()
 
     def on_mouse_moved(self, pos, pos_world):
         self.movement_delta = pos_world - self.client.player.center
-        self.client.send_mouse(*self.mouse_world)
+        self.send_mouse()
 
     def on_key_pressed(self, val, char):
         if char == 'w':
-            self.client.send_mouse(*self.mouse_world)
+            self.send_mouse()
             self.client.send_shoot()
         elif val == Gdk.KEY_space:
-            self.client.send_mouse(*self.mouse_world)
+            self.send_mouse()
             self.client.send_split()
 
     def on_draw(self, c, w):
         if w.show_debug:
             # movement lines
+            mouse_pos = w.world_to_screen_pos(self.mouse_world)
             for cid in self.client.player.own_ids:
                 cell = self.client.world.cells[cid]
                 x, y = w.world_to_screen_pos(cell.pos)
                 c.set_source_rgba(*to_rgba(FUCHSIA, .3))
                 c.move_to(x, y)
-                c.line_to(*w.world_to_screen_pos(self.mouse_world))
+                c.line_to(*mouse_pos)
                 c.stroke()
 
 
@@ -147,7 +157,6 @@ class AgarWindow:
     def __init__(self):
         self.show_debug = False
         self.win_w, self.win_h = self.win_size = Vec(1000, 1000 * 9 / 16)
-        self.mouse_pos = Vec()
         self.screen_center = self.win_size / 2
         self.screen_scale = max(self.win_w / 1920, self.win_h / 1080)
 
@@ -219,18 +228,17 @@ class AgarWindow:
         self.client.channel.broadcast('key_pressed', val=val, char=char)
 
     def on_mouse_moved(self, _, event):
-        self.mouse_pos.set(event.x, event.y)
-        self.client.channel.broadcast('mouse_moved', pos=self.mouse_pos,
-                                      pos_world=self.screen_to_world_pos(
-                                          self.mouse_pos))
+        mouse_pos = Vec(event.x, event.y)
+        self.client.channel.broadcast('mouse_moved', pos=mouse_pos,
+                                pos_world=self.screen_to_world_pos(mouse_pos))
 
     def world_to_screen_pos(self, pos):
         return self.screen_center \
-               + (self.screen_scale * (pos - self.client.player.center))
+               + ((pos - self.client.player.center) * self.screen_scale)
 
     def screen_to_world_pos(self, pos):
         return self.client.player.center \
-               + (self.screen_scale * (pos - self.screen_center))
+               + ((pos - self.screen_center) / self.screen_scale)
 
     def draw(self, _, c):
         c.set_source_rgba(*DARKGRAY)
@@ -257,12 +265,12 @@ class AgarWindow:
         line_width = c.get_line_width()
         c.set_line_width(.5)
 
-        for y in range(int(wt), int(wb), int(50 * self.screen_scale)):
+        for y in frange(wt, wb, 50 * self.screen_scale):
             c.move_to(wl, y)
             c.line_to(wr, y)
             c.stroke()
 
-        for x in range(int(wl), int(wr), int(50 * self.screen_scale)):
+        for x in frange(wl, wr, 50 * self.screen_scale):
             c.move_to(x, wt)
             c.line_to(x, wb)
             c.stroke()
