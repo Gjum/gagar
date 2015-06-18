@@ -324,8 +324,7 @@ class AgarWindow:
             x, y = pos = self.world_to_screen_pos(cell.pos)
             draw_circle(c, pos, cell.size * self.screen_scale,
                         color=to_rgba(cell.color, .8))
-            # name, size
-            if cell.is_virus or cell.size < 20:  # food <= 11 < 30 <= cells
+            if cell.is_virus or cell.is_food or cell.is_ejected_mass:
                 pass  # do not draw name/size
             elif cell.name:
                 draw_text_center(c, pos, '%s' % cell.name)

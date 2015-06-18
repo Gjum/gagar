@@ -67,6 +67,14 @@ class Cell(object):
         self.is_virus = is_virus
         self.is_agitated = is_agitated
 
+    @property
+    def is_food(self):
+        return self.size < 20 and not self.name
+
+    @property
+    def is_ejected_mass(self):
+        return self.size in (37, 38) and not self.name
+
     def same_player(self, other):
         """
         Compares name and color.
