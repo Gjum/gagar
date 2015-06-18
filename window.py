@@ -92,6 +92,7 @@ class Logger(Subscriber):
         self.channel = channel
         self.client = client
         self.log_msgs = []
+        self.leader_max = -1
 
     def on_log_msg(self, msg, update=9):
         """
@@ -134,6 +135,16 @@ class Logger(Subscriber):
     def on_own_id(self, cid):
         if len(self.client.player.own_ids) == 1:
             self.channel.broadcast('log_msg', msg='Respawned', update=0)
+
+    def on_leaderboard_names(self, leaderboard):
+        if not self.client.player.own_ids:
+            return
+        our_cid = min(c.cid for c in self.client.player.own_cells)
+        for i, (cid, name) in enumerate(leaderboard):
+            if cid == our_cid:
+                self.leader_max = max(i, self.leader_max)
+                msg = 'Leaderboard: %i. (top: %i.)' % (i, self.leader_max)
+                self.channel.broadcast('log_msg', msg=msg)
 
     def on_draw(self, c, w):
         # scrolling log
@@ -392,10 +403,13 @@ class AgarWindow:
                     self.INFO_SIZE, 21 * len(world.leaderboard_names))
         c.fill()
 
-        for i, (points, name) in enumerate(self.client.world.leaderboard_names):
+        player_cid = min(c.cid for c in client.player.own_cells) \
+            if client.player.own_ids else -1
+        for i, (cid, name) in enumerate(world.leaderboard_names):
             name = name or 'An unnamed cell'
-            text = '%i. %s (%s)' % (i+1, name, points)
-            draw_text_left(c, (lb_x, 20*(i+1)), text)
+            text = '%i. %s (%s)' % (i+1, name, cid)
+            color = RED if cid == player_cid else WHITE
+            draw_text_left(c, (lb_x, 20*(i+1)), text, color=color)
 
     def tick(self, drawing_area):
         # TODO no ticking, only draw when server sends world update
