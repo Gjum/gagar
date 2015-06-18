@@ -140,10 +140,11 @@ class Logger(Subscriber):
         if not self.client.player.own_ids:
             return
         our_cid = min(c.cid for c in self.client.player.own_cells)
-        for i, (cid, name) in enumerate(leaderboard):
+        for rank, (cid, name) in enumerate(leaderboard):
             if cid == our_cid:
-                self.leader_max = max(i, self.leader_max)
-                msg = 'Leaderboard: %i. (top: %i.)' % (i, self.leader_max)
+                rank += 1  # start at rank 1
+                self.leader_max = min(rank, self.leader_max)
+                msg = 'Leaderboard: %i. (top: %i.)' % (rank, self.leader_max)
                 self.channel.broadcast('log_msg', msg=msg)
 
     def on_draw(self, c, w):
@@ -403,11 +404,12 @@ class AgarWindow:
 
         player_cid = min(c.cid for c in client.player.own_cells) \
             if client.player.own_ids else -1
-        for i, (cid, name) in enumerate(world.leaderboard_names):
+        for rank, (cid, name) in enumerate(world.leaderboard_names):
+            rank += 1  # start at rank 1
             name = name or 'An unnamed cell'
-            text = '%i. %s (%s)' % (i+1, name, cid)
+            text = '%i. %s (%s)' % (rank, name, cid)
             color = RED if cid == player_cid else WHITE
-            draw_text_left(c, (lb_x, 20*(i+1)), text, color=color)
+            draw_text_left(c, (lb_x, 20*rank), text, color=color)
 
     def tick(self, drawing_area):
         # TODO no ticking, only draw when server sends world update
