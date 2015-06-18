@@ -310,11 +310,11 @@ class AgarWindow:
             self.client.send_spectate()
         elif char == 'r':
             self.client.send_respawn()
-        elif char == 'c':
+        elif char == 'c':  # reconnect to any server
             self.client.disconnect()
             self.client.player.nick = random.choice(special_names)
             self.client.connect()
-        elif char == 'k':
+        elif char == 'k':  # reconnect to same server (maybe different world)
             url = self.client.url
             self.client.disconnect()
             self.client.player.nick = random.choice(special_names)

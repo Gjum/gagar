@@ -17,7 +17,10 @@ Controls
 | `W`       | shoot small cell      |
 | `Space`   | split                 |
 | `Mouse`   | movement direction    |
+| `C`       | reconnect to any server |
+| `K`       | reconnect to same server (maybe different world) |
 | `H`       | show/hide debug hints |
+| `F3`      | show/hide FPS meter   |
 | `Q`/`ESC` | quit                  |
 
 TODO
