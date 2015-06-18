@@ -142,7 +142,7 @@ class Logger(Subscriber):
 
         y_start = w.win_h - num_log_lines*log_line_h + 9
 
-        c.set_source_rgba(0,0,0, .3)
+        c.set_source_rgba(*to_rgba(BLACK, .3))
         c.rectangle(0, w.win_h - num_log_lines*log_line_h,
                     w.INFO_SIZE, num_log_lines*log_line_h)
         c.fill()
@@ -178,7 +178,7 @@ class MassGraph(Subscriber):
         scale_y = w.INFO_SIZE / (max(self.graph)[0] or 10)
         old_line_width = c.get_line_width()
         c.set_line_width(scale_x)
-        c.set_source_rgba(0,0,1, .3)
+        c.set_source_rgba(*to_rgba(BLUE, .3))
         for i, (total_mass, masses) in enumerate(reversed(self.graph)):
             c.move_to(i * scale_x, 0)
             c.rel_line_to(0, total_mass * scale_y)
@@ -207,13 +207,13 @@ class FpsMeter(Subscriber):
 
     def on_draw(self, c, w):
         if self.show:
-            c.set_source_rgba(1,0,0, .3)
+            c.set_source_rgba(*to_rgba(RED, .3))
             for i, t in enumerate(self.draw_times):
                 c.move_to(w.win_w - 4*i - 2, w.win_h)
                 c.rel_line_to(0, -t * 1000)
                 c.stroke()
 
-            c.set_source_rgba(1,1,0, .3)
+            c.set_source_rgba(*to_rgba(YELLOW, .3))
             for i, t in enumerate(self.world_times):
                 c.move_to(w.win_w - 4*i, w.win_h)
                 c.rel_line_to(0, -t * 1000)
@@ -381,7 +381,7 @@ class AgarWindow:
         # leaderboard
         lb_x = self.win_w - self.INFO_SIZE
 
-        c.set_source_rgba(0,0,0, .6)
+        c.set_source_rgba(*to_rgba(BLACK, .6))
         c.rectangle(lb_x - 10, 0,
                     self.INFO_SIZE, 21 * len(self.client.world.leaderboard_names))
         c.fill()

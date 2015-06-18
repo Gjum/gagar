@@ -25,7 +25,11 @@ BLACK = (0,0,0)
 WHITE = (1,1,1)
 DARKGRAY = (.2,)*3
 LIGHTGRAY = (.7,)*3
-BLUE = (.2,.2,1)
+RED = (1,0,0)
+GREEN = (0,1,0)
+BLUE = (0,0,1)
+YELLOW = (1,1,0)
+TURQUOISE = (0,1,1)
 FUCHSIA = (1,0,1)
 
 def to_rgba(c, a):
