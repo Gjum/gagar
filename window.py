@@ -135,14 +135,14 @@ class Logger(Subscriber):
         log_line_h = 12
         log_char_w = 6  # seems to work with my font
 
-        log = list(format_log(self.log_msgs, w.LOG_W / log_char_w))
-        num_log_lines = min(len(log), int(w.win_h / log_line_h))
+        log = list(format_log(self.log_msgs, w.INFO_SIZE / log_char_w))
+        num_log_lines = min(len(log), int(w.INFO_SIZE / log_line_h))
 
         y_start = w.win_h - num_log_lines*log_line_h + 9
 
         c.set_source_rgba(0,0,0, .3)
         c.rectangle(0, w.win_h - num_log_lines*log_line_h,
-                    w.LOG_W, num_log_lines*log_line_h)
+                    w.INFO_SIZE, num_log_lines*log_line_h)
         c.fill()
 
         for i, text in enumerate(log[-num_log_lines:]):
@@ -150,8 +150,42 @@ class Logger(Subscriber):
                            text, size=10, face='monospace')
 
 
+class MassGraph(Subscriber):
+    def __init__(self, channel, client):
+        super(MassGraph, self).__init__(channel)
+        self.client = client
+        self.graph = []
+
+    def on_respawn(self):
+        self.graph.clear()
+
+    def on_world_update_post(self):
+        player = self.client.player
+        if not player.is_alive:
+            return
+        sample = (
+            player.total_mass,
+            sorted((c.cid, c.mass) for c in player.own_cells)
+        )
+        self.graph.append(sample)
+
+    def on_draw(self, c, w):
+        if not self.graph:
+            return
+        scale_x = w.INFO_SIZE / len(self.graph)
+        scale_y = w.INFO_SIZE / (max(self.graph)[0] or 10)
+        old_line_width = c.get_line_width()
+        c.set_line_width(scale_x)
+        c.set_source_rgba(0,0,1, .3)
+        for i, (total_mass, masses) in enumerate(reversed(self.graph)):
+            c.move_to(i * scale_x, 0)
+            c.rel_line_to(0, total_mass * scale_y)
+            c.stroke()
+        c.set_line_width(old_line_width)
+
+
 class AgarWindow:
-    LOG_W = 300
+    INFO_SIZE = 300
 
     def __init__(self):
         self.show_debug = False
@@ -174,24 +208,25 @@ class AgarWindow:
 
         GLib.timeout_add(50, self.tick, drawing_area)
 
-        self.client = Client()
-        self.client.player.nick = random.choice(special_names)
+        self.client = client = Client()
+        client.player.nick = random.choice(special_names)
 
-        Logger(self.client.channel, self.client)
-        NativeControl(self.client.channel, self.client)
+        Logger(client.channel, client)
+        NativeControl(client.channel, client)
+        MassGraph(client.channel, client)
 
-        self.client.connect()
+        client.connect()
         # self.client.connect('ws://localhost:443')
         # self.client.connect('ws://213.168.251.152:443')
 
         # watch socket in GTK main loop
         # `or True` is for always returning True to keep watching
-        GLib.io_add_watch(self.client.ws, GLib.IO_IN, lambda ws, _:
-                          self.client.on_message() or True)
-        GLib.io_add_watch(self.client.ws, GLib.IO_ERR, lambda _, __:
-                          self.client.channel.broadcast('sock_error') or True)
-        GLib.io_add_watch(self.client.ws, GLib.IO_HUP, lambda _, __:
-                          self.client.disconnect() or True)
+        GLib.io_add_watch(client.ws, GLib.IO_IN, lambda ws, _:
+                          client.on_message() or True)
+        GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda _, __:
+                          client.channel.broadcast('sock_error') or True)
+        GLib.io_add_watch(client.ws, GLib.IO_HUP, lambda _, __:
+                          client.disconnect() or True)
 
         self.window.show_all()
 
@@ -303,11 +338,11 @@ class AgarWindow:
         self.client.channel.broadcast('draw', c=c, w=self)
 
         # leaderboard
-        lb_x = self.win_w - self.LOG_W
+        lb_x = self.win_w - self.INFO_SIZE
 
         c.set_source_rgba(0,0,0, .6)
         c.rectangle(lb_x - 10, 0,
-                    self.LOG_W, 21 * len(self.client.world.leaderboard_names))
+                    self.INFO_SIZE, 21 * len(self.client.world.leaderboard_names))
         c.fill()
 
         for i, (points, name) in enumerate(self.client.world.leaderboard_names):
