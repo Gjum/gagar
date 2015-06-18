@@ -312,10 +312,12 @@ class AgarWindow:
             self.client.send_respawn()
         elif char == 'c':
             self.client.disconnect()
+            self.client.player.nick = random.choice(special_names)
             self.client.connect()
         elif char == 'k':
             url = self.client.url
             self.client.disconnect()
+            self.client.player.nick = random.choice(special_names)
             self.client.connect(url)
 
         self.client.channel.broadcast('key_pressed', val=val, char=char)
