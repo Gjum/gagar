@@ -285,22 +285,19 @@ class AgarWindow:
         # cells
         # normal: show large over small, debug: show small over large
         for cell in sorted(self.client.world.cells.values(),
-                key=lambda cell: cell.size, reverse=self.show_debug):
+                           reverse=self.show_debug):
             x, y = pos = self.world_to_screen_pos(cell.pos)
             draw_circle(c, pos, cell.size * self.screen_scale,
                         color=to_rgba(cell.color, .8))
             # name, size
             if cell.is_virus or cell.size < 20:  # food <= 11 < 30 <= cells
                 pass  # do not draw name/size
-            elif cell.is_agitated and self.show_debug:
-                draw_text_center(c, pos, '(agitated)')
-                draw_text_center(c, (x, y + 12), '%i' % cell.size)
             elif cell.name:
                 draw_text_center(c, pos, '%s' % cell.name)
                 if self.show_debug:
-                    draw_text_center(c, (x, y + 12), '%i' % cell.size)
+                    draw_text_center(c, (x, y + 12), '%i' % cell.mass)
             elif self.show_debug:
-                draw_text_center(c, pos, '%i' % cell.size)
+                draw_text_center(c, pos, '%i' % cell.mass)
 
         # draw handlers
         self.client.channel.broadcast('draw', c=c, w=self)

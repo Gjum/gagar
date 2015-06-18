@@ -61,6 +61,7 @@ class Cell(object):
         self.cid = cid
         self.pos = Vec(x, y)
         self.size = size
+        self.mass = size**2 / 100.0
         self.name = getattr(self, 'name', name) or name
         self.color = tuple(map(lambda rgb: rgb / 255.0, color))
         self.is_virus = is_virus
@@ -75,8 +76,8 @@ class Cell(object):
                 and self.color == other.color
 
     def __lt__(self, other):
-        if self.size != other.size:
-            return self.size < other.size
+        if self.mass != other.mass:
+            return self.mass < other.mass
         return self.cid < other.cid
 
 
@@ -106,9 +107,11 @@ class Player(object):
         self.scale = 1
         self.center = self.world.size / 2
         self.total_size = 0
+        self.total_mass = 0
 
     def cells_changed(self):
         self.total_size = sum(cell.size for cell in self.own_cells)
+        self.total_mass = sum(cell.mass for cell in self.own_cells)
         self.scale = pow(min(1, 64 / self.total_size), 0.4) \
             if self.total_size > 0 else 1
 
