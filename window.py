@@ -190,14 +190,12 @@ class MassGraph(Subscriber):
             return
         scale_x = w.INFO_SIZE / len(self.graph)
         scale_y = w.INFO_SIZE / (max(self.graph)[0] or 10)
-        old_line_width = c.get_line_width()
-        c.set_line_width(scale_x)
         c.set_source_rgba(*to_rgba(BLUE, .3))
+        c.move_to(0, 0)
         for i, (total_mass, masses) in enumerate(reversed(self.graph)):
-            c.move_to(i * scale_x, 0)
-            c.rel_line_to(0, total_mass * scale_y)
-            c.stroke()
-        c.set_line_width(old_line_width)
+            c.line_to(i * scale_x, total_mass * scale_y)
+        c.line_to(w.INFO_SIZE, 0)
+        c.fill()
 
 
 class FpsMeter(Subscriber):
