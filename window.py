@@ -125,7 +125,8 @@ class Logger(Subscriber):
             name = 'Someone'
             if eater_id in self.client.world.cells:
                 name = '"%s"' % self.client.world.cells[eater_id].name
-            msg = '%s ate me! (%i mass)' % (name, mass)
+            what = 'killed' if len(self.client.player.own_ids) <= 1 else 'ate'
+            msg = '%s %s me! (%i mass)' % (name, what, mass)
             self.channel.broadcast('log_msg', msg=msg)
 
     def on_world_update_post(self):
