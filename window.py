@@ -89,6 +89,7 @@ def format_log(lines, width, indent='  '):
 class Logger(Subscriber):
     def __init__(self, channel, client):
         super(Logger, self).__init__(channel)
+        self.channel = channel
         self.client = client
         self.log_msgs = []
 
@@ -111,26 +112,28 @@ class Logger(Subscriber):
     def on_sock_open(self):
         # remove ws://
         ip = self.client.url[5:]
-        self.client.channel.broadcast('log_msg', msg='Connected as "%s" to %s'
-                                      % (self.client.player.nick, ip))
+        msg = 'Connected as "%s" to %s' % (self.client.player.nick, ip)
+        self.channel.broadcast('log_msg', msg=msg)
 
     def on_cell_eaten(self, eater_id, eaten_id):
         if eaten_id in self.client.player.own_ids:
+            mass = self.client.world.cells[eater_id].mass
             name = 'Someone'
             if eater_id in self.client.world.cells:
                 name = '"%s"' % self.client.world.cells[eater_id].name
-            self.client.channel.broadcast('log_msg', msg='%s ate me!' % name)
+            msg = '%s ate me! (%i mass)' % (name, mass)
+            self.channel.broadcast('log_msg', msg=msg)
 
     def on_world_update_post(self):
         x, y = self.client.player.center
         px, py = (self.client.player.center * 100.0).ivdiv(self.client.world.size)
         msg = 'Size: %i Pos: (%.2f %.2f) (%i%% %i%%)' \
               % (self.client.player.total_size, x, y, round(px), round(py))
-        self.client.channel.broadcast('log_msg', msg=msg)
+        self.channel.broadcast('log_msg', msg=msg)
 
     def on_own_id(self, cid):
         if len(self.client.player.own_ids) == 1:
-            self.client.channel.broadcast('log_msg', msg='Respawned', update=0)
+            self.channel.broadcast('log_msg', msg='Respawned', update=0)
 
     def on_draw(self, c, w):
         # scrolling log
@@ -320,12 +323,15 @@ class AgarWindow:
         c.set_source_rgba(*DARKGRAY)
         c.paint()
 
+        client = self.client
+        world = client.world
+
         # window may have been resized
         alloc = self.window.get_allocation()
         self.win_w, self.win_h = alloc.width, alloc.height
         self.win_size.set(self.win_w, self.win_h)
         self.screen_center = self.win_size / 2
-        self.screen_scale = self.client.player.scale \
+        self.screen_scale = client.player.scale \
                             * max(self.win_w / 1920, self.win_h / 1080)
 
         # XXX show whole world
@@ -334,7 +340,7 @@ class AgarWindow:
         # self.world_center = self.world_size / 2
 
         wl, wt = self.world_to_screen_pos(Vec())
-        wr, wb = self.world_to_screen_pos(self.client.world.size)
+        wr, wb = self.world_to_screen_pos(world.size)
 
         # grid
         c.set_source_rgba(*to_rgba(LIGHTGRAY, .3))
@@ -354,14 +360,14 @@ class AgarWindow:
         # world border
         c.set_line_width(4)
         c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
-        c.rectangle(wl, wt, *(self.client.world.size * self.screen_scale))
+        c.rectangle(wl, wt, *(world.size * self.screen_scale))
         c.stroke()
 
         c.set_line_width(line_width)
 
         # cells
         # normal: show large over small, debug: show small over large
-        for cell in sorted(self.client.world.cells.values(),
+        for cell in sorted(world.cells.values(),
                            reverse=self.show_debug):
             x, y = pos = self.world_to_screen_pos(cell.pos)
             draw_circle(c, pos, cell.size * self.screen_scale,
@@ -376,14 +382,14 @@ class AgarWindow:
                 draw_text_center(c, pos, '%i' % cell.mass)
 
         # draw handlers
-        self.client.channel.broadcast('draw', c=c, w=self)
+        client.channel.broadcast('draw', c=c, w=self)
 
         # leaderboard
         lb_x = self.win_w - self.INFO_SIZE
 
         c.set_source_rgba(*to_rgba(BLACK, .6))
         c.rectangle(lb_x - 10, 0,
-                    self.INFO_SIZE, 21 * len(self.client.world.leaderboard_names))
+                    self.INFO_SIZE, 21 * len(world.leaderboard_names))
         c.fill()
 
         for i, (points, name) in enumerate(self.client.world.leaderboard_names):
