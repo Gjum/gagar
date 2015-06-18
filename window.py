@@ -108,7 +108,10 @@ class Logger(Subscriber):
                 break
         else:
             self.log_msgs.append(msg)
-            print('[LOG]', msg)
+            try:
+                print('[LOG]', msg)
+            except UnicodeEncodeError:
+                pass
 
     def on_sock_open(self):
         # remove ws://
