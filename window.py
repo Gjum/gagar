@@ -18,8 +18,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
+from collections import deque
 
 import random
+from time import time
 from gi.repository import Gtk, GLib, Gdk
 from client import Client, special_names
 from drawing_helpers import *
@@ -184,6 +186,45 @@ class MassGraph(Subscriber):
         c.set_line_width(old_line_width)
 
 
+class FpsMeter(Subscriber):
+    def __init__(self, channel, queue_len, toggle_key=Gdk.KEY_F3):
+        super(FpsMeter, self).__init__(channel)
+        self.draw_last = self.world_last = time()
+        self.draw_times = deque([0]*queue_len, queue_len)
+        self.world_times = deque([0]*queue_len, queue_len)
+        self.toggle_key = toggle_key
+        self.show = False
+
+    def on_key_pressed(self, val, char):
+        if val == self.toggle_key:
+            self.show = not self.show
+
+    def on_world_update_post(self):
+        now = time()
+        dt = now - self.world_last
+        self.world_last = now
+        self.world_times.appendleft(dt)
+
+    def on_draw(self, c, w):
+        if self.show:
+            c.set_source_rgba(1,0,0, .3)
+            for i, t in enumerate(self.draw_times):
+                c.move_to(w.win_w - 4*i - 2, w.win_h)
+                c.rel_line_to(0, -t * 1000)
+                c.stroke()
+
+            c.set_source_rgba(1,1,0, .3)
+            for i, t in enumerate(self.world_times):
+                c.move_to(w.win_w - 4*i, w.win_h)
+                c.rel_line_to(0, -t * 1000)
+                c.stroke()
+
+        now = time()
+        dt = now - self.draw_last
+        self.draw_last = now
+        self.draw_times.appendleft(dt)
+
+
 class AgarWindow:
     INFO_SIZE = 300
 
@@ -214,6 +255,7 @@ class AgarWindow:
         Logger(client.channel, client)
         NativeControl(client.channel, client)
         MassGraph(client.channel, client)
+        FpsMeter(client.channel, 50)
 
         client.connect()
         # self.client.connect('ws://localhost:443')
