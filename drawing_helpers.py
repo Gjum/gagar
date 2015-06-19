@@ -75,5 +75,14 @@ def draw_circle(c, pos, radius, color=None):
     x, y = pos
     if color:
         c.set_source_rgba(*color)
+    c.new_sub_path()
     c.arc(x, y, radius, 0, TWOPI)
     c.fill()
+
+def draw_circle_outline(c, pos, radius, color=None):
+    x, y = pos
+    if color:
+        c.set_source_rgba(*color)
+    c.new_sub_path()
+    c.arc(x, y, radius, 0, TWOPI)
+    c.stroke()
