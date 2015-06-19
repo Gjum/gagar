@@ -36,10 +36,12 @@ def frange(start, end, step):
 
 
 class NativeControl(Subscriber):
-    def __init__(self, channel, client):
+    def __init__(self, channel, client, key_movement_lines=ord('l')):
         super(NativeControl, self).__init__(channel)
         self.client = client
         self.movement_delta = Vec()
+        self.show_movement_lines = True
+        self.key_movement_lines = key_movement_lines
 
     @property
     def mouse_world(self):
@@ -62,16 +64,15 @@ class NativeControl(Subscriber):
         elif val == Gdk.KEY_space:
             self.send_mouse()
             self.client.send_split()
+        elif val == self.key_movement_lines:
+            self.show_movement_lines = not self.show_movement_lines
 
     def on_draw(self, c, w):
-        if w.show_debug:
-            # movement lines
+        if self.show_movement_lines:
             mouse_pos = w.world_to_screen_pos(self.mouse_world)
-            for cid in self.client.player.own_ids:
-                cell = self.client.world.cells[cid]
-                x, y = w.world_to_screen_pos(cell.pos)
-                c.set_source_rgba(*to_rgba(FUCHSIA, .3))
-                c.move_to(x, y)
+            c.set_source_rgba(*to_rgba(BLACK, .3))
+            for cell in self.client.player.own_cells:
+                c.move_to(*w.world_to_screen_pos(cell.pos))
                 c.line_to(*mouse_pos)
                 c.stroke()
 
