@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-TWOPI = 6.28
+TWOPI = 6.28318530717958
 
 BLACK = (0,0,0)
 WHITE = (1,1,1)
