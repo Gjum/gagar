@@ -82,16 +82,22 @@ class HelperHud(Subscriber):
         super(HelperHud, self).__init__(channel)
         self.client = client
         self.show_cell_masses = False
+        self.show_remerge_times = False
         self.cell_masses_key = ord('h')
+        self.remerge_times_key = ord('h')
 
     def on_key_pressed(self, val, char):
         if val == self.cell_masses_key:
             self.show_cell_masses = not self.show_cell_masses
+        if val == self.remerge_times_key:
+            self.show_remerge_times = not self.show_remerge_times
 
     def on_draw(self, c, w):
         p = self.client.player
         if self.show_cell_masses:
             self.draw_cell_masses(c, w, p)
+        if self.show_remerge_times:
+            self.draw_remerge_times(c, w, p)
 
     def draw_cell_masses(self, c, w, p):
         for cell in p.world.cells.values():
@@ -102,6 +108,19 @@ class HelperHud(Subscriber):
                 pos.iadd(Vec(0, 12))
             text = '%i mass' % cell.mass
             draw_text_center(c, pos, text)
+
+    def draw_remerge_times(self, c, w, p):
+        if len(p.own_ids) <= 1:
+            return  # dead or only one cell, no remerge time to display
+        now = time()
+        for cell in p.own_cells:
+            split_for = now - cell.split_time
+            # formula by DebugMonkey
+            ttr = (p.total_mass * 20 + 30000) / 1000 - split_for
+            if ttr < 0: continue
+            pos = w.world_to_screen_pos(cell.pos)
+            text = 'TTR %.1fs after %.1fs' % (ttr, split_for)
+            draw_text_center(c, Vec(0, -12).iadd(pos), text)
 
 
 def format_log(lines, width, indent='  '):
