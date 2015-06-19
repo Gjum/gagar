@@ -23,14 +23,21 @@ TWOPI = 6.28318530717958
 
 BLACK = (0,0,0)
 WHITE = (1,1,1)
-DARKGRAY = (.2,)*3
-LIGHTGRAY = (.7,)*3
+GRAY = (.5,)*3
+DARK_GRAY = (.2,)*3
+LIGHT_GRAY = (.7,)*3
+
 RED = (1,0,0)
 GREEN = (0,1,0)
 BLUE = (0,0,1)
 YELLOW = (1,1,0)
 TURQUOISE = (0,1,1)
 FUCHSIA = (1,0,1)
+
+ORANGE = (1,.5,0)
+PURPLE = (.5,0,1)
+LIGHT_GREEN = (.5,1,.5)
+LIGHT_BLUE = (.5,.5,1)
 
 def to_rgba(c, a):
     return c[0], c[1], c[2], a

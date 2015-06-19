@@ -337,7 +337,7 @@ class AgarWindow:
             .idiv(self.screen_scale).iadd(self.client.player.center)
 
     def draw(self, _, c):
-        c.set_source_rgba(*DARKGRAY)
+        c.set_source_rgba(*DARK_GRAY)
         c.paint()
 
         client = self.client
@@ -360,7 +360,7 @@ class AgarWindow:
         wr, wb = self.world_to_screen_pos(world.size)
 
         # grid
-        c.set_source_rgba(*to_rgba(LIGHTGRAY, .3))
+        c.set_source_rgba(*to_rgba(LIGHT_GRAY, .3))
         line_width = c.get_line_width()
         c.set_line_width(.5)
 
@@ -376,7 +376,7 @@ class AgarWindow:
 
         # world border
         c.set_line_width(4)
-        c.set_source_rgba(*to_rgba(LIGHTGRAY, .5))
+        c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
         c.rectangle(wl, wt, *(world.size * self.screen_scale))
         c.stroke()
 
@@ -416,6 +416,8 @@ class AgarWindow:
             name = name or 'An unnamed cell'
             text = '%i. %s (%s)' % (rank, name, cid)
             color = RED if cid == player_cid else WHITE
+            if cid in world.cells:
+                color = LIGHT_BLUE
             draw_text_left(c, (lb_x, 20*rank), text, color=color)
 
     def tick(self, drawing_area):
