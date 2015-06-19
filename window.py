@@ -61,10 +61,10 @@ class NativeControl(Subscriber):
         if char == 'w':
             self.send_mouse()
             self.client.send_shoot()
-        elif val == Gdk.KEY_space:
+        if val == Gdk.KEY_space:
             self.send_mouse()
             self.client.send_split()
-        elif val == self.key_movement_lines:
+        if val == self.key_movement_lines:
             self.show_movement_lines = not self.show_movement_lines
 
     def on_draw(self, c, w):
@@ -75,6 +75,33 @@ class NativeControl(Subscriber):
                 c.move_to(*w.world_to_screen_pos(cell.pos))
                 c.line_to(*mouse_pos)
                 c.stroke()
+
+
+class HelperHud(Subscriber):
+    def __init__(self, channel, client):
+        super(HelperHud, self).__init__(channel)
+        self.client = client
+        self.show_cell_masses = False
+        self.cell_masses_key = ord('h')
+
+    def on_key_pressed(self, val, char):
+        if val == self.cell_masses_key:
+            self.show_cell_masses = not self.show_cell_masses
+
+    def on_draw(self, c, w):
+        p = self.client.player
+        if self.show_cell_masses:
+            self.draw_cell_masses(c, w, p)
+
+    def draw_cell_masses(self, c, w, p):
+        for cell in p.world.cells.values():
+            if cell.is_food or cell.is_ejected_mass:
+                continue
+            pos = w.world_to_screen_pos(cell.pos)
+            if cell.name:
+                pos.iadd(Vec(0, 12))
+            text = '%i mass' % cell.mass
+            draw_text_center(c, pos, text)
 
 
 def format_log(lines, width, indent='  '):
@@ -248,7 +275,6 @@ class AgarWindow:
     INFO_SIZE = 300
 
     def __init__(self):
-        self.show_debug = False
         self.win_w, self.win_h = self.win_size = Vec(1000, 1000 * 9 / 16)
         self.screen_center = self.win_size / 2
         self.screen_scale = max(self.win_w / 1920, self.win_h / 1080)
@@ -273,6 +299,7 @@ class AgarWindow:
 
         Logger(client.channel, client)
         NativeControl(client.channel, client)
+        HelperHud(client.channel, client)
         MassGraph(client.channel, client)
         FpsMeter(client.channel, 50)
 
@@ -306,8 +333,6 @@ class AgarWindow:
         if char == 'q' or val == Gdk.KEY_Escape:
             self.client.disconnect()
             Gtk.main_quit()
-        elif char == 'h':
-            self.show_debug = not self.show_debug
         elif char == 's':
             self.client.send_spectate()
         elif char == 'r':
@@ -384,22 +409,16 @@ class AgarWindow:
         c.set_line_width(line_width)
 
         # cells
-        # normal: show large over small, debug: show small over large
-        for cell in sorted(world.cells.values(),
-                           reverse=self.show_debug):
-            x, y = pos = self.world_to_screen_pos(cell.pos)
+        # reverse to show small over large cells
+        for cell in sorted(world.cells.values(), reverse=True):
+            pos = self.world_to_screen_pos(cell.pos)
             draw_circle(c, pos, cell.size * self.screen_scale,
                         color=to_rgba(cell.color, .8))
             if cell.is_virus or cell.is_food or cell.is_ejected_mass:
                 pass  # do not draw name/size
             elif cell.name:
                 draw_text_center(c, pos, '%s' % cell.name)
-                if self.show_debug:
-                    draw_text_center(c, (x, y + 12), '%i' % cell.mass)
-            elif self.show_debug:
-                draw_text_center(c, pos, '%i' % cell.mass)
 
-        # draw handlers
         client.channel.broadcast('draw', c=c, w=self)
 
         # leaderboard
