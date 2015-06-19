@@ -89,7 +89,6 @@ def format_log(lines, width, indent='  '):
 class Logger(Subscriber):
     def __init__(self, channel, client):
         super(Logger, self).__init__(channel)
-        self.channel = channel
         self.client = client
         self.log_msgs = []
         self.leader_max = -1
@@ -115,18 +114,16 @@ class Logger(Subscriber):
 
     def on_sock_open(self):
         # remove ws://
-        ip = self.client.url[5:]
-        msg = 'Connected as "%s" to %s' % (self.client.player.nick, ip)
+        msg = 'Connected to %s' % self.client.url[5:]
         self.channel.broadcast('log_msg', msg=msg)
 
     def on_cell_eaten(self, eater_id, eaten_id):
         if eaten_id in self.client.player.own_ids:
-            mass = self.client.world.cells[eater_id].mass
             name = 'Someone'
             if eater_id in self.client.world.cells:
                 name = '"%s"' % self.client.world.cells[eater_id].name
             what = 'killed' if len(self.client.player.own_ids) <= 1 else 'ate'
-            msg = '%s %s me! (%i mass)' % (name, what, mass)
+            msg = '%s %s me!' % (name, what)
             self.channel.broadcast('log_msg', msg=msg)
 
     def on_world_update_post(self):
@@ -138,7 +135,11 @@ class Logger(Subscriber):
 
     def on_own_id(self, cid):
         if len(self.client.player.own_ids) == 1:
-            self.channel.broadcast('log_msg', msg='Respawned', update=0)
+            msg = 'Respawned as %s' % self.client.player.nick
+            self.channel.broadcast('log_msg', msg=msg, update=0)
+        else:
+            msg = 'Split into %i cells' % len(self.client.player.own_ids)
+            self.channel.broadcast('log_msg', msg=msg)
 
     def on_leaderboard_names(self, leaderboard):
         if not self.client.player.own_ids:
