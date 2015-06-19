@@ -218,14 +218,19 @@ class Client(object):
             print('ERROR empty message received', file=stderr)
             return
         buf = BufferStruct(msg)
-        ident = self.packet_dict[buf.pop_uint8()]
-        parser = getattr(self, 'parse_%s' % ident)
+        opcode = buf.pop_uint8()
+        try:
+            packet_name = self.packet_dict[opcode]
+        except KeyError:
+            print('ERROR unknown packet', opcode, file=stderr)
+            return
+        parser = getattr(self, 'parse_%s' % packet_name)
         try:
             parser(buf)
             assert len(buf.buffer) == 0, \
-                'Buffer not empty after parsing "%s" packet' % ident
+                'Buffer not empty after parsing "%s" packet' % packet_name
         except BufferUnderflowError as e:
-            print('ERROR parsing', ident, 'packet failed:',
+            print('ERROR parsing', packet_name, 'packet failed:',
                   e.args[0], str(BufferStruct(msg)), file=stderr)
             raise e
 
