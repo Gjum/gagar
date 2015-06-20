@@ -474,6 +474,26 @@ class AgarWindow:
 
         client.channel.broadcast('draw', c=c, w=self)
 
+        # minimap
+        if world.size.x != 0:
+            minimap_size = self.win_w / 5
+            line_width = c.get_line_width()
+            c.set_line_width(1)
+
+            c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
+            c.rectangle(self.win_w-minimap_size, self.win_h-minimap_size,
+                        *(minimap_size,)*2)
+            c.stroke()
+
+            minimap_scale = minimap_size / world.size.x
+            for cell in world.cells.values():
+                pos = Vec(self.win_w-minimap_size, self.win_h-minimap_size)
+                draw_circle_outline(c, pos.iadd(cell.pos * minimap_scale),
+                                    cell.size * minimap_scale,
+                                    color=to_rgba(cell.color, .8))
+
+            c.set_line_width(line_width)
+
         # leaderboard
         lb_x = self.win_w - self.INFO_SIZE
 
