@@ -196,7 +196,9 @@ class Client(object):
         if self.magic_hash:
             self.send_magic_hash(self.magic_hash)
 
+        old_nick = self.player.nick
         self.player = Player()
+        self.player.nick = old_nick
         self.channel.broadcast('ingame')
         return True
 
