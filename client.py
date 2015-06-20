@@ -22,6 +22,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 from collections import defaultdict
 import struct
 from sys import stderr
+import urllib.request
 import websocket
 from buffer import BufferStruct, BufferUnderflowError
 from event import Channel
@@ -48,11 +49,10 @@ special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
     .split(';')
 
 
-def get_url(region='EU-London'):
-    import urllib.request
-    addr = urllib.request.urlopen('http://m.agar.io', data=region.encode())\
-            .read().decode().split('\n')[0]
-    return 'ws://%s' % addr
+def find_server(region='EU-London'):
+    text = urllib.request.urlopen('http://m.agar.io',
+                                    data=region.encode()).read().decode()
+    return text.split('\n')
 
 
 class Cell(object):
@@ -170,13 +170,18 @@ class Client(object):
         self.world = self.player.world
         self.ws = websocket.WebSocket()
         self.url = ''
+        self.magic_hash = ''
 
-    def connect(self, url=None):
+    def connect(self, url=None, magic_hash=None):
         if self.ws.connected:
             print('Already connected to "%s"', self.url, file=stderr)
             return False
 
-        self.url = url or get_url()
+        self.url, self.magic_hash = url, magic_hash
+        if not self.url:
+            ip_port, self.magic_hash, *extra = find_server()
+            self.url = 'ws://%s' % ip_port
+
         self.ws.connect(self.url, timeout=1, origin='http://agar.io')
         if not self.ws.connected:
             print('Failed to connect to "%s"', self.url, file=stderr)
@@ -189,6 +194,9 @@ class Client(object):
             return False
 
         self.send_handshake()
+        if self.magic_hash:
+            self.send_magic_hash(self.magic_hash)
+
         self.world = self.player.world = World()
         self.channel.broadcast('ingame')
         return True
@@ -362,6 +370,9 @@ class Client(object):
     def send_handshake(self):
         self.send_struct('<BI', 254, 4)
         self.send_struct('<BI', 255, 673720360)
+
+    def send_magic_hash(self, magic_hash):
+        self.send_struct('<B%iB' % len(magic_hash), 80, *map(ord, magic_hash))
 
     def send_respawn(self):
         nick = self.player.nick
