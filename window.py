@@ -135,7 +135,7 @@ class CellInfo(Subscriber):
     def draw_hostility(self, c, w, p):
         if not p.is_alive: return  # nothing to be hostile against
         own_min_mass = min(c.mass for c in p.own_cells)
-        own_max_mass = min(c.mass for c in p.own_cells)
+        own_max_mass = max(c.mass for c in p.own_cells)
         lw = c.get_line_width()
         c.set_line_width(5)
         for cell in p.world.cells.values():
@@ -523,9 +523,12 @@ class AgarWindow:
             rank += 1  # start at rank 1
             name = name or 'An unnamed cell'
             text = '%i. %s (%s)' % (rank, name, cid)
-            color = RED if cid == player_cid else WHITE
-            if cid in world.cells:
+            if cid == player_cid:
+                color = RED
+            elif cid in world.cells:
                 color = LIGHT_BLUE
+            else:
+                color = WHITE
             draw_text_left(c, (lb_x, 20*rank), text, color=color)
 
     def tick(self, drawing_area):
