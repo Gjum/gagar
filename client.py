@@ -167,7 +167,6 @@ class Client(object):
     def __init__(self, channel=Channel()):
         self.channel = channel
         self.player = Player()
-        self.world = self.player.world
         self.ws = websocket.WebSocket()
         self.url = ''
         self.magic_hash = ''
@@ -197,7 +196,7 @@ class Client(object):
         if self.magic_hash:
             self.send_magic_hash(self.magic_hash)
 
-        self.world = self.player.world = World()
+        self.player = Player()
         self.channel.broadcast('ingame')
         return True
 
@@ -212,6 +211,7 @@ class Client(object):
     def disconnect(self):
         self.ws.close()
         self.channel.broadcast('sock_closed')
+        # keep player/world data
 
     def listen(self):
         """Set up a quick connection. Returns on disconnect."""
@@ -255,7 +255,7 @@ class Client(object):
         # handlers can print names, check own_ids, ...
 
         player = self.player
-        cells = self.world.cells
+        cells = player.world.cells
 
         # ca eats cb
         for i in range(buf.pop_uint16()):
@@ -318,7 +318,7 @@ class Client(object):
             l_name = buf.pop_str()
             leaderboard_names.append((l_id, l_name))
         self.channel.broadcast('leaderboard_names', leaderboard=leaderboard_names)
-        self.world.leaderboard_names = leaderboard_names
+        self.player.world.leaderboard_names = leaderboard_names
 
     def parse_leaderboard_groups(self, buf):
         # sent every 500ms
@@ -329,7 +329,7 @@ class Client(object):
             angle = buf.pop_float32()
             leaderboard_groups.append(angle)
         self.channel.broadcast('leaderboard_groups', angles=leaderboard_groups)
-        self.world.leaderboard_groups = leaderboard_groups
+        self.player.world.leaderboard_groups = leaderboard_groups
 
     def parse_own_id(self, buf):  # new cell ID, respawned or split
         cid = buf.pop_uint32()
@@ -338,7 +338,7 @@ class Client(object):
             player.own_ids.clear()
             self.channel.broadcast('respawn')
         # server sends empty name, assumes we set it here
-        self.world.cells[cid].name = player.nick
+        self.player.world.cells[cid].name = player.nick
         player.own_ids.add(cid)
         player.cells_changed()
         self.channel.broadcast('own_id', cid=cid)
@@ -351,8 +351,8 @@ class Client(object):
         assert int(right - left) == int(bottom - top) == 11180, 'World is not expected size'  # xxx
         self.channel.broadcast('world_rect',
                                left=left, top=top, right=right, bottom=bottom)
-        self.world.size.set(right - left, bottom - top)
-        self.player.center = self.world.size / 2
+        self.player.world.size.set(right - left, bottom - top)
+        self.player.center = self.player.world.size / 2
 
     def parse_spectate_update(self, buf):
         # only in spectate mode
@@ -367,7 +367,7 @@ class Client(object):
     def parse_clear_cells(self, buf):
         # TODO clear cells packet is untested
         self.channel.broadcast('clear_cells')
-        self.world.cells.clear()
+        self.player.world.cells.clear()
         self.player.own_ids.clear()
         self.player.cells_changed()
 

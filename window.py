@@ -96,6 +96,9 @@ class HelperHud(Subscriber):
         if val == self.hostility_key:
             self.show_hostility = not self.show_hostility
 
+    def on_own_id(self, cid):
+        self.client.player.world.cells[cid].split_time = time()
+
     def on_draw(self, c, w):
         p = self.client.player
         if self.show_cell_masses:
@@ -201,19 +204,21 @@ class Logger(Subscriber):
         self.channel.broadcast('log_msg', msg=msg)
 
     def on_cell_eaten(self, eater_id, eaten_id):
-        if eaten_id in self.client.player.own_ids:
+        player = self.client.player
+        if eaten_id in player.own_ids:
             name = 'Someone'
-            if eater_id in self.client.world.cells:
-                name = '"%s"' % self.client.world.cells[eater_id].name
-            what = 'killed' if len(self.client.player.own_ids) <= 1 else 'ate'
+            if eater_id in player.world.cells:
+                name = '"%s"' % player.world.cells[eater_id].name
+            what = 'killed' if len(player.own_ids) <= 1 else 'ate'
             msg = '%s %s me!' % (name, what)
             self.channel.broadcast('log_msg', msg=msg)
 
     def on_world_update_post(self):
-        x, y = self.client.player.center
-        px, py = (self.client.player.center * 100.0).ivdiv(self.client.world.size)
+        player = self.client.player
+        x, y = player.center
+        px, py = (player.center * 100.0).ivdiv(player.world.size)
         msg = 'Size: %i Pos: (%.2f %.2f) (%i%% %i%%)' \
-              % (self.client.player.total_size, x, y, round(px), round(py))
+              % (player.total_size, x, y, round(px), round(py))
         self.channel.broadcast('log_msg', msg=msg)
 
     def on_own_id(self, cid):
@@ -419,16 +424,15 @@ class AgarWindow:
         c.set_source_rgba(*DARK_GRAY)
         c.paint()
 
-        client = self.client
-        world = client.world
+        player = self.client.player
+        world = player.world
 
         # window may have been resized
         alloc = self.window.get_allocation()
         self.win_w, self.win_h = alloc.width, alloc.height
         self.win_size.set(self.win_w, self.win_h)
         self.screen_center = self.win_size / 2
-        self.screen_scale = client.player.scale \
-                            * max(self.win_w / 1920, self.win_h / 1080)
+        self.screen_scale = player.scale * max(self.win_w / 1920, self.win_h / 1080)
 
         # XXX show whole world
         # self.screen_scale = min(self.win_h / self.world_size,
@@ -472,7 +476,7 @@ class AgarWindow:
             elif cell.name:
                 draw_text_center(c, pos, '%s' % cell.name)
 
-        client.channel.broadcast('draw', c=c, w=self)
+        self.client.channel.broadcast('draw', c=c, w=self)
 
         # minimap
         if world.size.x != 0:
@@ -502,8 +506,8 @@ class AgarWindow:
                     self.INFO_SIZE, 21 * len(world.leaderboard_names))
         c.fill()
 
-        player_cid = min(c.cid for c in client.player.own_cells) \
-            if client.player.own_ids else -1
+        player_cid = min(c.cid for c in player.own_cells) \
+            if player.own_ids else -1
         for rank, (cid, name) in enumerate(world.leaderboard_names):
             rank += 1  # start at rank 1
             name = name or 'An unnamed cell'
