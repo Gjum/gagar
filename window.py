@@ -77,9 +77,10 @@ class NativeControl(Subscriber):
                 c.stroke()
 
 
-class HelperHud(Subscriber):
+# wsp, ssc
+class CellInfo(Subscriber):
     def __init__(self, channel, client):
-        super(HelperHud, self).__init__(channel)
+        super(CellInfo, self).__init__(channel)
         self.client = client
         self.show_cell_masses = False
         self.show_remerge_times = False
@@ -357,11 +358,19 @@ class AgarWindow:
         self.client = client = Client()
         client.player.nick = random.choice(special_names)
 
-        Logger(client.channel, client)
-        NativeControl(client.channel, client)
-        HelperHud(client.channel, client)
-        MassGraph(client.channel, client)
-        FpsMeter(client.channel, 50)
+        self.channel_draw_world = Channel()
+        self.channel_draw_hud = Channel()
+
+        NativeControl(self.channel_draw_world, client)
+        CellInfo(self.channel_draw_world, client)
+
+        Logger(self.channel_draw_hud, client)
+        MassGraph(self.channel_draw_hud, client)
+        FpsMeter(self.channel_draw_hud, 50)
+
+        for sub in self.channel_draw_world.subscribers \
+                + self.channel_draw_hud.subscribers:
+            client.channel.subscribe(sub)
 
         client.connect_retry()
 
@@ -476,7 +485,7 @@ class AgarWindow:
             elif cell.name:
                 draw_text_center(c, pos, '%s' % cell.name)
 
-        self.client.channel.broadcast('draw', c=c, w=self)
+        self.channel_draw_world.broadcast('draw', c=c, w=self)
 
         # minimap
         if world.size.x != 0:
@@ -497,6 +506,8 @@ class AgarWindow:
                                     color=to_rgba(cell.color, .8))
 
             c.set_line_width(line_width)
+
+        self.channel_draw_hud.broadcast('draw', c=c, w=self)
 
         # leaderboard
         lb_x = self.win_w - self.INFO_SIZE
