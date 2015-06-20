@@ -19,17 +19,9 @@ Controls
 | `Mouse`   | movement direction    |
 | `C`       | reconnect to any server |
 | `K`       | reconnect to same server (maybe different world) |
-| `H`       | show/hide debug hints |
+| `H`       | show/hide helpful cell info |
 | `F3`      | show/hide FPS meter   |
 | `Q`/`ESC` | quit                  |
-
-TODO
-----
-- mark cells:
-  - eatable
-  - can eat you
-  - on leaderboard
-- auto-collect nearby cells
 
 ---
 
