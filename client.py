@@ -201,6 +201,14 @@ class Client(object):
         self.channel.broadcast('ingame')
         return True
 
+    def connect_retry(self, *args):
+        while 1:
+            try:
+                self.connect(*args)
+                break
+            except ConnectionResetError:
+                self.channel.broadcast('log_msg', msg='Connection failed, retrying...', update=0)
+
     def disconnect(self):
         self.ws.close()
         self.channel.broadcast('sock_closed')

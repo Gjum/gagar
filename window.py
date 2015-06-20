@@ -358,9 +358,7 @@ class AgarWindow:
         MassGraph(client.channel, client)
         FpsMeter(client.channel, 50)
 
-        client.connect()
-        # self.client.connect('ws://localhost:443')
-        # self.client.connect('ws://213.168.251.152:443')
+        client.connect_retry()
 
         # watch socket in GTK main loop
         # `or True` is for always returning True to keep watching
@@ -395,12 +393,12 @@ class AgarWindow:
         elif char == 'c':  # reconnect to any server
             self.client.disconnect()
             self.client.player.nick = random.choice(special_names)
-            self.client.connect()
+            self.client.connect_retry()
         elif char == 'k':  # reconnect to same server (maybe different world)
             url = self.client.url
             self.client.disconnect()
             self.client.player.nick = random.choice(special_names)
-            self.client.connect(url)
+            self.client.connect_retry(url)
 
         self.client.channel.broadcast('key_pressed', val=val, char=char)
 
