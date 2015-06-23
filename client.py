@@ -67,14 +67,21 @@ def find_server(region='EU-London'):
             .read().decode().split('\n')
 
 
-def gcommer():
-    url = 'http://at.gcommer.com/status'
-    text = request.urlopen(url).read().decode()
-    j = json.loads(text)
-    for server, num in j['status'].items():
-        if num > 0:
-            break
-
+def gcommer(server=None):
+    """
+    Try to get a token for this server address.
+    `server` has to be ip:port, e.g. `'1.2.3.4:1234'`
+    Returns tuple(server, token)
+    """
+    if not server:
+        # no server specified, just get any server
+        # this is only useful for testing, as m.agar.io can also be used for this
+        url = 'http://at.gcommer.com/status'
+        text = request.urlopen(url).read().decode()
+        j = json.loads(text)
+        for server, num in j['status'].items():
+            if num > 0:
+                break  # server is now one of the listed servers with tokens
     url = 'http://at.gcommer.com/claim?server=%s' % server
     text = request.urlopen(url).read().decode()
     j = json.loads(text)
