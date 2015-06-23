@@ -203,6 +203,8 @@ class Logger(Subscriber):
         # remove ws://
         msg = 'Connected to %s' % self.client.url[5:]
         self.channel.broadcast('log_msg', msg=msg)
+        msg = 'Token: %s' % self.client.token
+        self.channel.broadcast('log_msg', msg=msg)
 
     def on_cell_eaten(self, eater_id, eaten_id):
         player = self.client.player
