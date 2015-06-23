@@ -169,16 +169,16 @@ class Client(object):
         self.player = Player()
         self.ws = websocket.WebSocket()
         self.url = ''
-        self.magic_hash = ''
+        self.token = ''
 
-    def connect(self, url=None, magic_hash=None):
+    def connect(self, url=None, token=None):
         if self.ws.connected:
             print('Already connected to "%s"', self.url, file=stderr)
             return False
 
-        self.url, self.magic_hash = url, magic_hash
+        self.url, self.token = url, token
         if not self.url:
-            ip_port, self.magic_hash, *extra = find_server()
+            ip_port, self.token, *extra = find_server()
             self.url = 'ws://%s' % ip_port
 
         self.ws.connect(self.url, timeout=1, origin='http://agar.io')
@@ -193,8 +193,8 @@ class Client(object):
             return False
 
         self.send_handshake()
-        if self.magic_hash:
-            self.send_magic_hash(self.magic_hash)
+        if self.token:
+            self.send_token(self.token)
 
         old_nick = self.player.nick
         self.player = Player()
@@ -381,8 +381,8 @@ class Client(object):
         self.send_struct('<BI', 254, 4)
         self.send_struct('<BI', 255, 2207389747)
 
-    def send_magic_hash(self, magic_hash):
-        self.send_struct('<B%iB' % len(magic_hash), 80, *map(ord, magic_hash))
+    def send_token(self, token):
+        self.send_struct('<B%iB' % len(token), 80, *map(ord, token))
 
     def send_respawn(self):
         nick = self.player.nick
