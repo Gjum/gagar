@@ -379,7 +379,7 @@ class Client(object):
 
     def send_handshake(self):
         self.send_struct('<BI', 254, 4)
-        self.send_struct('<BI', 255, 673720360)
+        self.send_struct('<BI', 255, 2207389747)
 
     def send_magic_hash(self, magic_hash):
         self.send_struct('<B%iB' % len(magic_hash), 80, *map(ord, magic_hash))
