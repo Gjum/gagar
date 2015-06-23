@@ -410,11 +410,6 @@ class AgarWindow:
             self.client.disconnect()
             self.client.player.nick = random.choice(special_names)
             self.client.connect_retry()
-        elif char == 'k':  # reconnect to same server (maybe different world)
-            url = self.client.url
-            self.client.disconnect()
-            self.client.player.nick = random.choice(special_names)
-            self.client.connect_retry(url)
 
         self.client.channel.broadcast('key_pressed', val=val, char=char)
 

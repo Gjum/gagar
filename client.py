@@ -22,7 +22,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 from collections import defaultdict
 import struct
 from sys import stderr
-import urllib.request
+from urllib import request
 import websocket
 from buffer import BufferStruct, BufferUnderflowError
 from event import Channel
@@ -48,11 +48,22 @@ special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'irs;receita federal' \
     .split(';')
 
+moz_headers = [
+    'User-Agent: Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0',
+    'Origin: http://agar.io',
+    'Referer: http://agar.io',
+]
+
+
+handshake_version = 154669603  # TODO extract at runtime, changing ~daily :P
+
 
 def find_server(region='EU-London'):
-    text = urllib.request.urlopen('http://m.agar.io',
-                                    data=region.encode()).read().decode()
-    return text.split('\n')
+    opener = request.build_opener()
+    opener.addheaders = [h.split(': ') for h in moz_headers]
+    data = '%s\n%i' % (region, handshake_version)
+    return opener.open('http://m.agar.io/', data=data.encode()) \
+            .read().decode().split('\n')
 
 
 class Cell(object):
@@ -176,12 +187,16 @@ class Client(object):
             print('Already connected to "%s"', self.url, file=stderr)
             return False
 
+        # make sure its a websocket url
+        if url and url[:5] != 'ws://': url = 'ws://%s' % url
+
         self.url, self.token = url, token
         if not self.url:
             ip_port, self.token, *extra = find_server()
             self.url = 'ws://%s' % ip_port
 
-        self.ws.connect(self.url, timeout=1, origin='http://agar.io')
+        self.ws.connect(self.url, timeout=1, origin='http://agar.io',
+                        header=moz_headers)
         if not self.ws.connected:
             print('Failed to connect to "%s"', self.url, file=stderr)
             return False
@@ -379,7 +394,7 @@ class Client(object):
 
     def send_handshake(self):
         self.send_struct('<BI', 254, 4)
-        self.send_struct('<BI', 255, 2207389747)
+        self.send_struct('<BI', 255, handshake_version)
 
     def send_token(self, token):
         self.send_struct('<B%iB' % len(token), 80, *map(ord, token))
