@@ -14,11 +14,11 @@ Controls
 | Key       | Action                |
 |:----------|:----------------------|
 | `R`       | respawn               |
+| `Mouse`   | movement direction    |
 | `W`       | shoot small cell      |
 | `Space`   | split                 |
-| `Mouse`   | movement direction    |
+| `K`       | explode               |
 | `C`       | reconnect to any server |
-| `K`       | reconnect to same server (maybe different world) |
 | `H`       | show/hide helpful cell info |
 | `F3`      | show/hide FPS meter   |
 | `Q`/`ESC` | quit                  |

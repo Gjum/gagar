@@ -61,10 +61,12 @@ class NativeControl(Subscriber):
         if char == 'w':
             self.send_mouse()
             self.client.send_shoot()
-        if val == Gdk.KEY_space:
+        elif val == Gdk.KEY_space:
             self.send_mouse()
             self.client.send_split()
-        if val == self.key_movement_lines:
+        elif char == 'k':
+            self.client.send_explode()
+        elif val == self.key_movement_lines:
             self.show_movement_lines = not self.show_movement_lines
 
     def on_draw(self, c, w):

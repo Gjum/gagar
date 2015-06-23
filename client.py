@@ -437,3 +437,6 @@ class Client(object):
 
     def send_shoot(self):
         self.send_struct('<B', 21)
+
+    def send_explode(self):
+        self.send_struct('<B', 20)
