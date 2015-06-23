@@ -20,6 +20,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from collections import defaultdict
+import json
 import struct
 from sys import stderr
 from urllib import request
@@ -64,6 +65,21 @@ def find_server(region='EU-London'):
     data = '%s\n%i' % (region, handshake_version)
     return opener.open('http://m.agar.io/', data=data.encode()) \
             .read().decode().split('\n')
+
+
+def gcommer():
+    url = 'http://at.gcommer.com/status'
+    text = request.urlopen(url).read().decode()
+    j = json.loads(text)
+    for server, num in j['status'].items():
+        if num > 0:
+            break
+
+    url = 'http://at.gcommer.com/claim?server=%s' % server
+    text = request.urlopen(url).read().decode()
+    j = json.loads(text)
+    token = j['token']
+    return server, token
 
 
 class Cell(object):
