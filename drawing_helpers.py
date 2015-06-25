@@ -39,6 +39,12 @@ PURPLE = (.5,0,1)
 LIGHT_GREEN = (.5,1,.5)
 LIGHT_BLUE = (.5,.5,1)
 
+def frange(start, end, step):
+    """same as range(), but allows using floats"""
+    while start < end:
+        yield start
+        start += step
+
 def to_rgba(c, a):
     return c[0], c[1], c[2], a
 

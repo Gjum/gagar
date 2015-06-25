@@ -26,7 +26,6 @@ from sys import stderr
 from urllib import request
 import websocket
 from buffer import BufferStruct, BufferUnderflowError
-from event import Channel
 from vec import Vec
 
 
@@ -198,12 +197,20 @@ class Client(object):
         64: 'world_rect',
     }
 
-    def __init__(self, channel=Channel()):
-        self.channel = channel
+    def __init__(self, subscriber):
+        self.subscriber = subscriber
         self.player = Player()
         self.ws = websocket.WebSocket()
         self.url = ''
         self.token = ''
+
+    @property
+    def world(self):
+        return self.player.world
+
+    @world.setter
+    def world(self, world):
+        self.player.world = world
 
     def connect(self, url=None, token=None):
         if self.ws.connected:
@@ -224,7 +231,7 @@ class Client(object):
             print('Failed to connect to "%s"', self.url, file=stderr)
             return False
 
-        self.channel.broadcast('sock_open')
+        self.subscriber.on_sock_open()
         # allow handshake canceling
         if not self.ws.connected:
             print('Disconnected before sending handshake', file=stderr)
@@ -237,7 +244,7 @@ class Client(object):
         old_nick = self.player.nick
         self.player = Player()
         self.player.nick = old_nick
-        self.channel.broadcast('ingame')
+        self.subscriber.on_ingame()
         return True
 
     def connect_retry(self, *args):
@@ -246,11 +253,11 @@ class Client(object):
                 self.connect(*args)
                 break
             except ConnectionResetError:
-                self.channel.broadcast('log_msg', msg='Connection failed, retrying...', update=0)
+                self.subscriber.on_log_msg(msg='Connection failed, retrying...', update=0)
 
     def disconnect(self):
         self.ws.close()
-        self.channel.broadcast('sock_closed')
+        self.subscriber.on_sock_closed()
         # keep player/world data
 
     def listen(self):
@@ -261,7 +268,7 @@ class Client(object):
             if r:
                 self.on_message()
             elif e:
-                self.channel.broadcast('sock_error')
+                self.subscriber.on_sock_error()
         self.disconnect()
 
     def on_message(self):
@@ -301,14 +308,14 @@ class Client(object):
         for i in range(buf.pop_uint16()):
             ca = buf.pop_uint32()
             cb = buf.pop_uint32()
-            self.channel.broadcast('cell_eaten', eater_id=ca, eaten_id=cb)
+            self.subscriber.on_cell_eaten(eater_id=ca, eaten_id=cb)
             if cb in self.player.own_ids:  # we got eaten
                 if len(self.player.own_ids) <= 1:
-                    self.channel.broadcast('death')
+                    self.subscriber.on_death()
                     # do not clear all cells yet, they still get updated
                 self.player.own_ids.remove(cb)
             if cb in cells:
-                self.channel.broadcast('cell_removed', cid=cb)
+                self.subscriber.on_cell_removed(cid=cb)
                 del cells[cb]
 
         # create/update cells
@@ -328,7 +335,7 @@ class Client(object):
             if bitmask & 8: skips += 16
             for i in range(skips): buf.pop_uint8()
             cname = buf.pop_str()
-            self.channel.broadcast('cell_info', cid=cid, x=cx, y=cy,
+            self.subscriber.on_cell_info(cid=cid, x=cx, y=cy,
                                    size=csize, name=cname, color=color,
                                    is_virus=is_virus, is_agitated=is_agitated)
             cells[cid].__init__(cid=cid, x=cx, y=cy,
@@ -339,14 +346,14 @@ class Client(object):
         for i in range(buf.pop_uint32()):
             cid = buf.pop_uint32()
             if cid in cells:
-                self.channel.broadcast('cell_removed', cid=cid)
+                self.subscriber.on_cell_removed(cid=cid)
                 del cells[cid]
                 if cid in player.own_ids:  # own cells joined
                     player.own_ids.remove(cid)
 
         player.cells_changed()
 
-        self.channel.broadcast('world_update_post')
+        self.subscriber.on_world_update_post()
 
     def parse_leaderboard_names(self, buf):
         # sent every 500ms
@@ -357,7 +364,7 @@ class Client(object):
             l_id = buf.pop_uint32()
             l_name = buf.pop_str()
             leaderboard_names.append((l_id, l_name))
-        self.channel.broadcast('leaderboard_names', leaderboard=leaderboard_names)
+        self.subscriber.on_leaderboard_names(leaderboard=leaderboard_names)
         self.player.world.leaderboard_names = leaderboard_names
 
     def parse_leaderboard_groups(self, buf):
@@ -368,7 +375,7 @@ class Client(object):
         for i in range(n):
             angle = buf.pop_float32()
             leaderboard_groups.append(angle)
-        self.channel.broadcast('leaderboard_groups', angles=leaderboard_groups)
+        self.subscriber.on_leaderboard_groups(angles=leaderboard_groups)
         self.player.world.leaderboard_groups = leaderboard_groups
 
     def parse_own_id(self, buf):  # new cell ID, respawned or split
@@ -376,12 +383,12 @@ class Client(object):
         player = self.player
         if not player.is_alive:  # respawned
             player.own_ids.clear()
-            self.channel.broadcast('respawn')
+            self.subscriber.on_respawn()
         # server sends empty name, assumes we set it here
         self.player.world.cells[cid].name = player.nick
         player.own_ids.add(cid)
         player.cells_changed()
-        self.channel.broadcast('own_id', cid=cid)
+        self.subscriber.on_own_id(cid=cid)
 
     def parse_world_rect(self, buf):  # world size
         left = buf.pop_float64()
@@ -389,8 +396,7 @@ class Client(object):
         right = buf.pop_float64()
         bottom = buf.pop_float64()
         assert int(right - left) == int(bottom - top) == 11180, 'World is not expected size'  # xxx
-        self.channel.broadcast('world_rect',
-                               left=left, top=top, right=right, bottom=bottom)
+        self.subscriber.on_world_rect(left=left, top=top, right=right, bottom=bottom)
         self.player.world.size.set(right - left, bottom - top)
         self.player.center = self.player.world.size / 2
 
@@ -401,12 +407,11 @@ class Client(object):
         scale = buf.pop_float32()
         self.player.center.set(x, y)
         self.player.scale = scale
-        self.channel.broadcast('spectate_update',
-                               pos=self.player.center, scale=scale)
+        self.subscriber.on_spectate_update(pos=self.player.center, scale=scale)
 
     def parse_clear_cells(self, buf):
         # TODO clear cells packet is untested
-        self.channel.broadcast('clear_cells')
+        self.subscriber.on_clear_cells()
         self.player.world.cells.clear()
         self.player.own_ids.clear()
         self.player.cells_changed()

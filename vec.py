@@ -172,6 +172,8 @@ class Vec(object):
     def __nonzero__(self):
         return bool(self.x or self.y)
 
+    __bool__ = __nonzero__
+
     def __len__(self):
         return 2
 
