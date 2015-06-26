@@ -200,6 +200,9 @@ class Logger:
         msg = 'Token: %s' % self.client.token
         self.log_msg(msg=msg)
 
+    def on_world_rect(self, **kwargs):
+        self.log_msg(msg='World is from %(left)i:%(top)i to %(right)i:%(bottom)i' % kwargs)
+
     def on_cell_eaten(self, eater_id, eaten_id):
         player = self.client.player
         if eaten_id in player.own_ids:
@@ -213,9 +216,8 @@ class Logger:
     def on_world_update_post(self):
         player = self.client.player
         x, y = player.center
-        px, py = (player.center * 100.0).ivdiv(player.world.size)
-        msg = 'Size: %i Pos: (%.2f %.2f) (%i%% %i%%)' \
-              % (player.total_size, x, y, round(px), round(py))
+        msg = 'Size: %i Pos: (%.2f %.2f)' \
+              % (player.total_size, x, y)
         self.log_msg(msg=msg)
 
     def on_own_id(self, cid):

@@ -103,7 +103,7 @@ class WorldViewer:
         elif self.world.size:
             self.screen_scale = min(self.win_size.x / self.world.size.x,
                               self.win_size.y / self.world.size.y)
-            self.world_center = self.world.size / 2
+            self.world_center = self.world.center
         else:
             # happens when the window gets drawn before the world got updated
             self.screen_scale = 1
@@ -118,8 +118,8 @@ class WorldViewer:
         if self.draw_subscriber: self.draw_subscriber.on_draw_background(c, self)
 
         world = self.world
-        wl, wt = self.world_to_screen_pos(Vec(0, 0))
-        wr, wb = self.world_to_screen_pos(world.size)
+        wl, wt = self.world_to_screen_pos(world.top_left)
+        wr, wb = self.world_to_screen_pos(world.bottom_right)
 
         # grid
         c.set_source_rgba(*to_rgba(LIGHT_GRAY, .3))
@@ -139,7 +139,7 @@ class WorldViewer:
         # world border
         c.set_line_width(4)
         c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
-        c.rectangle(wl, wt, *(world.size * self.screen_scale))
+        c.rectangle(wl, wt, wr, wb)
         c.stroke()
 
         c.set_line_width(line_width)
@@ -162,7 +162,7 @@ class WorldViewer:
         if self.draw_subscriber: self.draw_subscriber.on_draw_hud(c, self)
 
         # minimap
-        if world.size.x != 0:
+        if world.size:
             minimap_size = self.win_size.x / 5
             line_width = c.get_line_width()
             c.set_line_width(1)
@@ -175,6 +175,7 @@ class WorldViewer:
             minimap_scale = minimap_size / world.size.x
             for cell in world.cells.values():
                 pos = Vec(self.win_size.x-minimap_size, self.win_size.y-minimap_size)
+                pos += world.top_left
                 draw_circle_outline(c, pos.iadd(cell.pos * minimap_scale),
                                     cell.size * minimap_scale,
                                     color=to_rgba(cell.color, .8))

@@ -127,7 +127,16 @@ class World(object):
         self.cells = defaultdict(Cell)
         self.leaderboard_names = []
         self.leaderboard_groups = []
-        self.size = Vec(0, 0)
+        self.top_left = Vec(0, 0)
+        self.bottom_right = Vec(0, 0)
+
+    @property
+    def center(self):
+        return (self.top_left + self.bottom_right) / 2
+
+    @property
+    def size(self):
+        return self.top_left + self.bottom_right
 
     def __eq__(self, other):
         """Compare two worlds by comparing their leaderboards."""
@@ -146,7 +155,7 @@ class Player(object):
         self.own_ids = set()
         self.nick = ''
         self.scale = 1
-        self.center = self.world.size / 2
+        self.center = self.world.center
         self.total_size = 0
         self.total_mass = 0
 
@@ -395,10 +404,10 @@ class Client(object):
         top = buf.pop_float64()
         right = buf.pop_float64()
         bottom = buf.pop_float64()
-        assert int(right - left) == int(bottom - top) == 11180, 'World is not expected size'  # xxx
         self.subscriber.on_world_rect(left=left, top=top, right=right, bottom=bottom)
-        self.player.world.size.set(right - left, bottom - top)
-        self.player.center = self.player.world.size / 2
+        self.player.world.top_left = Vec(top, left)
+        self.player.world.bottom_right = Vec(bottom, right)
+        self.player.center = self.world.center
 
     def parse_spectate_update(self, buf):
         # only in spectate mode
