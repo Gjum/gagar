@@ -156,11 +156,11 @@ class Client(object):
     def connect_retry(self, url=None, token=None, tries=-1):
         while tries != 0:
             try:
-                self.connect(url=url, token=token)
-                break
+                return self.connect(url=url, token=token)
             except ConnectionResetError:
-                self.subscriber.on_log_msg(msg='Connection failed, retrying...', update=0)
+                self.subscriber.on_log_msg('Connection failed, retrying...')
                 tries -= 1
+        return False
 
     def disconnect(self):
         self.ws.close()
