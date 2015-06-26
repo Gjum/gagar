@@ -27,11 +27,12 @@ from gi.repository import Gtk, GLib, Gdk
 
 from client import Client, special_names
 from drawing_helpers import *
+from subscriber import MultiSubscriber, Subscriber
 from vec import Vec
 from window import WorldViewer
 
 
-class NativeControl:
+class NativeControl(Subscriber):
     def __init__(self, client, key_movement_lines=ord('l')):
         self.client = client
         self.movement_delta = Vec()
@@ -74,7 +75,7 @@ class NativeControl:
                 c.stroke()
 
 
-class CellInfo:
+class CellInfo(Subscriber):
     def __init__(self, client):
         self.client = client
         self.show_cell_masses = False
@@ -168,7 +169,7 @@ def format_log(lines, width, indent='  '):
             l = ind + l[width:]
 
 
-class Logger:
+class Logger(Subscriber):
     def __init__(self, client):
         self.client = client
         self.log_msgs = []
@@ -259,7 +260,7 @@ class Logger:
                            text, size=10, face='monospace')
 
 
-class MassGraph:
+class MassGraph(Subscriber):
     def __init__(self, client):
         self.client = client
         self.graph = []
@@ -290,7 +291,7 @@ class MassGraph:
         c.fill()
 
 
-class FpsMeter:
+class FpsMeter(Subscriber):
     def __init__(self, queue_len, toggle_key=Gdk.KEY_F3):
         self.draw_last = self.world_last = time()
         self.draw_times = deque([0]*queue_len, queue_len)
@@ -328,31 +329,7 @@ class FpsMeter:
         self.draw_times.appendleft(dt)
 
 
-class MultiSubscriber:
-    """Distributes method calls to multiple subscribers."""
-
-    def __init__(self, *subs):
-        self.subs = list(subs)
-
-    def sub(self, subscriber):
-        self.subs.append(subscriber)
-        return subscriber
-
-    def __getattr__(self, func_name):
-        def wrapper(*args, **kwargs):
-            none_called = True
-            for sub in self.subs:
-                handler = getattr(sub, func_name, None)
-                if handler:
-                    handler(*args, **kwargs)
-                    none_called = False
-            ignored = ['on_cell_info', 'on_cell_removed']
-            if none_called and func_name not in ignored:
-                pass#print('WARNING no subscriber handles', func_name)
-        return wrapper
-
-
-class Main:
+class Main(Subscriber):
     def __init__(self):
         multi_sub = MultiSubscriber(self)
 
