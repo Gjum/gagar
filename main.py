@@ -26,6 +26,7 @@ from time import time
 from gi.repository import Gtk, GLib, Gdk
 import sys
 
+from avoid import Avoid
 from client import Client, special_names, get_party_address
 from drawing_helpers import *
 from subscriber import MultiSubscriber, Subscriber
@@ -349,7 +350,8 @@ class GtkControl(Subscriber):
 
         self.client = client = Client(multi_sub)
 
-        multi_sub.sub(NativeControl(client))
+        # multi_sub.sub(NativeControl(client))
+        multi_sub.sub(Avoid(client))
         multi_sub.sub(CellInfo(client))
 
         multi_sub.sub(Logger(client))
