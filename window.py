@@ -139,7 +139,7 @@ class WorldViewer:
         # world border
         c.set_line_width(4)
         c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
-        c.rectangle(wl, wt, wr, wb)
+        c.rectangle(wl, wt, wr-wl, wb-wt)
         c.stroke()
 
         c.set_line_width(line_width)
@@ -163,20 +163,20 @@ class WorldViewer:
 
         # minimap
         if world.size:
-            minimap_size = self.win_size.x / 5
+            minimap_w = self.win_size.x / 5
             line_width = c.get_line_width()
             c.set_line_width(1)
 
             c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
-            c.rectangle(self.win_size.x-minimap_size, self.win_size.y-minimap_size,
-                        *(minimap_size,)*2)
+            c.rectangle(self.win_size.x-minimap_w, self.win_size.y-minimap_w,
+                        minimap_w, minimap_w)
             c.stroke()
 
-            minimap_scale = minimap_size / world.size.x
+            minimap_scale = minimap_w / world.size.x
             for cell in world.cells.values():
-                pos = Vec(self.win_size.x-minimap_size, self.win_size.y-minimap_size)
-                pos += world.top_left
-                draw_circle_outline(c, pos.iadd(cell.pos * minimap_scale),
+                pos = (cell.pos - world.top_left) * minimap_scale
+                pos += self.win_size - Vec(minimap_w, minimap_w)
+                draw_circle_outline(c, pos,
                                     cell.size * minimap_scale,
                                     color=to_rgba(cell.color, .8))
 
