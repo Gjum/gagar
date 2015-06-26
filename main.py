@@ -175,7 +175,7 @@ class Logger(Subscriber):
         self.log_msgs = []
         self.leader_max = -1
 
-    def log_msg(self, msg, update=9):
+    def on_log_msg(self, msg, update=0):
         """
         Updates up to 9th-last msg with new data.
         Compares first 5 chars or up to first space.
@@ -194,15 +194,16 @@ class Logger(Subscriber):
             except UnicodeEncodeError:
                 pass
 
+    def on_update_msg(self, msg):
+        self.on_log_msg(msg=msg, update=9)
+
     def on_sock_open(self):
         # remove ws://
-        msg = 'Connected to %s' % self.client.url[5:]
-        self.log_msg(msg=msg)
-        msg = 'Token: %s' % self.client.token
-        self.log_msg(msg=msg)
+        self.on_update_msg('Connected to %s' % self.client.url[5:])
+        self.on_update_msg('Token: %s' % self.client.token)
 
     def on_world_rect(self, **kwargs):
-        self.log_msg(msg='World is from %(left)i:%(top)i to %(right)i:%(bottom)i' % kwargs)
+        self.on_update_msg('World is from %(left)i:%(top)i to %(right)i:%(bottom)i' % kwargs)
 
     def on_cell_eaten(self, eater_id, eaten_id):
         player = self.client.player
@@ -212,22 +213,18 @@ class Logger(Subscriber):
                 name = '"%s"' % player.world.cells[eater_id].name
             what = 'killed' if len(player.own_ids) <= 1 else 'ate'
             msg = '%s %s me!' % (name, what)
-            self.log_msg(msg=msg)
+            self.on_update_msg(msg)
 
     def on_world_update_post(self):
         player = self.client.player
         x, y = player.center
-        msg = 'Size: %i Pos: (%.2f %.2f)' \
-              % (player.total_size, x, y)
-        self.log_msg(msg=msg)
+        self.on_update_msg('Size: %i Pos: (%.2f %.2f)' % (player.total_size, x, y))
 
     def on_own_id(self, cid):
         if len(self.client.player.own_ids) == 1:
-            msg = 'Respawned as %s' % self.client.player.nick
-            self.log_msg(msg=msg, update=0)
+            self.on_log_msg('Respawned as %s' % self.client.player.nick)
         else:
-            msg = 'Split into %i cells' % len(self.client.player.own_ids)
-            self.log_msg(msg=msg)
+            self.on_update_msg('Split into %i cells' % len(self.client.player.own_ids))
 
     def on_leaderboard_names(self, leaderboard):
         if not self.client.player.own_ids:
@@ -238,14 +235,14 @@ class Logger(Subscriber):
                 rank += 1  # start at rank 1
                 self.leader_max = min(rank, self.leader_max)
                 msg = 'Leaderboard: %i. (top: %i.)' % (rank, self.leader_max)
-                self.log_msg(msg=msg)
+                self.on_update_msg(msg)
 
     def on_draw_hud(self, c, w):
         # scrolling log
         log_line_h = 12
         log_char_w = 6  # seems to work with my font
 
-        log = list(format_log(self.log_msgs, w.INFO_SIZE / log_char_w))
+        log = list(format_log(self.on_log_msgs, w.INFO_SIZE / log_char_w))
         num_log_lines = min(len(log), int(w.INFO_SIZE / log_line_h))
 
         y_start = w.win_size.y - num_log_lines*log_line_h + 9

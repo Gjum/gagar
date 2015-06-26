@@ -120,7 +120,7 @@ class Client(object):
 
     def connect(self, url=None, token=None):
         if self.ws.connected:
-            print('Already connected to "%s"', self.url, file=stderr)
+            self.subscriber.on_log_msg('Already connected to "%s"' % self.url)
             return False
 
         # make sure its a websocket url
@@ -134,13 +134,13 @@ class Client(object):
         self.ws.connect(self.url, timeout=1, origin='http://agar.io',
                         header=moz_headers)
         if not self.ws.connected:
-            print('Failed to connect to "%s"', self.url, file=stderr)
+            self.subscriber.on_log_msg('Failed to connect to "%s"' % self.url)
             return False
 
         self.subscriber.on_sock_open()
         # allow handshake canceling
         if not self.ws.connected:
-            print('Disconnected before sending handshake', file=stderr)
+            self.subscriber.on_log_msg('Disconnected before sending handshake')
             return False
 
         self.send_handshake()
@@ -185,14 +185,14 @@ class Client(object):
             self.disconnect()
             return
         if not msg:
-            print('ERROR empty message received', file=stderr)
+            self.subscriber.on_log_msg('ERROR empty message received')
             return
         buf = BufferStruct(msg)
         opcode = buf.pop_uint8()
         try:
             packet_name = self.packet_dict[opcode]
         except KeyError:
-            print('ERROR unknown packet', opcode, file=stderr)
+            self.subscriber.on_log_msg('ERROR unknown packet %s' % opcode)
             return
         parser = getattr(self, 'parse_%s' % packet_name)
         try:
@@ -200,8 +200,8 @@ class Client(object):
             assert len(buf.buffer) == 0, \
                 'Buffer not empty after parsing "%s" packet' % packet_name
         except BufferUnderflowError as e:
-            print('ERROR parsing', packet_name, 'packet failed:',
-                  e.args[0], str(BufferStruct(msg)), file=stderr)
+            msg = 'ERROR parsing %s packet failed: %s' % (packet_name, e.args[0])
+            self.subscriber.on_log_msg(msg)
             raise e
 
     def parse_world_update(self, buf):
