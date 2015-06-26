@@ -261,13 +261,14 @@ class Client(object):
         self.subscriber.on_ingame()
         return True
 
-    def connect_retry(self, *args):
-        while 1:
+    def connect_retry(self, url=None, token=None, tries=-1):
+        while tries != 0:
             try:
-                self.connect(*args)
+                self.connect(url=url, token=token)
                 break
             except ConnectionResetError:
                 self.subscriber.on_log_msg(msg='Connection failed, retrying...', update=0)
+                tries -= 1
 
     def disconnect(self):
         self.ws.close()
