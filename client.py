@@ -332,9 +332,9 @@ class Client(object):
         while 1:
             cid = buf.pop_uint32()
             if cid == 0: break
-            cx = buf.pop_uint16()
-            cy = buf.pop_uint16()
-            csize = buf.pop_uint16()
+            cx = buf.pop_int16()
+            cy = buf.pop_int16()
+            csize = buf.pop_int16()
             color = (buf.pop_uint8(), buf.pop_uint8(), buf.pop_uint8())
             bitmask = buf.pop_uint8()
             is_virus = bool(bitmask & 1)
