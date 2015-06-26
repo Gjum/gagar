@@ -136,7 +136,7 @@ class World(object):
 
     @property
     def size(self):
-        return self.top_left + self.bottom_right
+        return self.top_left.abs() + self.bottom_right.abs()
 
     def __eq__(self, other):
         """Compare two worlds by comparing their leaderboards."""
@@ -146,6 +146,10 @@ class World(object):
         for ls, lo in zip(self.leaderboard_groups, other.leaderboard_groups):
             if ls != lo:
                 return False
+        if self.top_left != other.top_left:
+            return False
+        if self.bottom_right != other.bottom_right:
+            return False
         return True
 
 
