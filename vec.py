@@ -133,6 +133,16 @@ class Vec(object):
         u = v.unit()
         return u.imul(self.dot(u))
 
+    def iabs(self):
+        self.x = abs(self.x)
+        self.y = abs(self.y)
+        return self
+
+    def abs(self):
+        return self.copy().iabs()
+
+    __abs__ = abs
+
     def ineg(self):
         self.x = -self.x
         self.y = -self.y
