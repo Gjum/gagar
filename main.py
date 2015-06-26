@@ -405,8 +405,9 @@ class Main:
 
 
 if __name__ == '__main__':
-    print('Copyright (C) 2015  Gjum  <code.gjum@gmail.com>')
-    print("This program comes with ABSOLUTELY NO WARRANTY.\n"
+    print("Copyright (C) 2015  Gjum  <code.gjum@gmail.com>\n"
+          "This program comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
-          "under certain conditions; see LICENSE.txt for details.")
+          "under certain conditions; see LICENSE.txt for details.\n")
+    
     Main()
