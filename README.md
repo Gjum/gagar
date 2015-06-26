@@ -5,7 +5,7 @@ pyAgar.io
 
 agar.io Python client
 
-`python3 window.py`
+`python3 main.py`
 
 Requires `websocket-client` module and GTK.
 
