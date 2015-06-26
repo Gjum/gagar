@@ -200,6 +200,7 @@ class Client(object):
         16: 'world_update',
         17: 'spectate_update',
         20: 'clear_cells',
+        21: 'debug_line',
         32: 'own_id',
         49: 'leaderboard_names',
         50: 'leaderboard_groups',
@@ -424,6 +425,12 @@ class Client(object):
         self.player.world.cells.clear()
         self.player.own_ids.clear()
         self.player.cells_changed()
+
+    def parse_debug_line(self, buf):
+        # TODO debug line packet is untested
+        x = buf.pop_int16()
+        y = buf.pop_int16()
+        self.subscriber.on_debug_line(x=x, y=y)
 
     def send_struct(self, fmt, *data):
         if self.ws.connected:
