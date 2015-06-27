@@ -242,7 +242,7 @@ class Logger(Subscriber):
         log_line_h = 12
         log_char_w = 6  # seems to work with my font
 
-        log = list(format_log(self.on_log_msgs, w.INFO_SIZE / log_char_w))
+        log = list(format_log(self.log_msgs, w.INFO_SIZE / log_char_w))
         num_log_lines = min(len(log), int(w.INFO_SIZE / log_line_h))
 
         y_start = w.win_size.y - num_log_lines*log_line_h + 9
