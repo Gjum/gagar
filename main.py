@@ -173,7 +173,7 @@ class Logger(Subscriber):
     def __init__(self, client):
         self.client = client
         self.log_msgs = []
-        self.leader_max = -1
+        self.leader_best = 11 # outside leaderboard, to show first msg on >=10
 
     def on_log_msg(self, msg, update=0):
         """
@@ -233,8 +233,8 @@ class Logger(Subscriber):
         for rank, (cid, name) in enumerate(leaderboard):
             if cid == our_cid:
                 rank += 1  # start at rank 1
-                self.leader_max = min(rank, self.leader_max)
-                msg = 'Leaderboard: %i. (top: %i.)' % (rank, self.leader_max)
+                self.leader_best = min(rank, self.leader_best)
+                msg = 'Leaderboard: %i. (best: %i.)' % (rank, self.leader_best)
                 self.on_update_msg(msg)
 
     def on_draw_hud(self, c, w):
