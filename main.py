@@ -177,7 +177,7 @@ class Logger(Subscriber):
 
     def on_log_msg(self, msg, update=0):
         """
-        Updates up to 9th-last msg with new data.
+        Updates last `update` msgs with new data.
         Compares first 5 chars or up to first space.
         Set update=0 for no updating.
         """

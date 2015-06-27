@@ -56,7 +56,7 @@ moz_headers = [
 ]
 
 
-handshake_version = 154669603  # TODO extract at runtime, changing ~daily :P
+handshake_version = 154669603  # TODO extract at runtime, changing sometimes
 
 
 def find_server(region='EU-London'):
@@ -104,6 +104,9 @@ class Client(object):
     }
 
     def __init__(self, subscriber):
+        """
+        :param subscriber: instance of a subclass of Subscriber, i.e. imlements any on_*() methods
+        """
         self.subscriber = subscriber
         self.player = Player()
         self.ws = websocket.WebSocket()
@@ -119,6 +122,13 @@ class Client(object):
         self.player.world = world
 
     def connect(self, url=None, token=None):
+        """
+        Connect the underlying websocket to the url, send a handshake and optionally a token packet.
+
+        :param url: string, `ws://IP:PORT`
+        :param token: unique token, required by official servers, acquired through find_server()
+        :return: True if connected, False if not
+        """
         if self.ws.connected:
             self.subscriber.on_log_msg('Already connected to "%s"' % self.url)
             return False
@@ -154,6 +164,16 @@ class Client(object):
         return True
 
     def connect_retry(self, url=None, token=None, tries=-1):
+        """
+        Keep trying to connect, even when the connection gets reset.
+
+        Keeps calling Client.connect() while catching any ConnectionResetError.
+
+        :param url: string, `ws://IP:PORT`
+        :param token: unique token, required by official servers, acquired through find_server()
+        :param tries: number of tries before aborting, or -1 to keep trying
+        :return: True if connected, False if not
+        """
         while tries != 0:
             try:
                 return self.connect(url=url, token=token)

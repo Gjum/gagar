@@ -26,6 +26,13 @@ from vec import Vec
 
 
 class WorldViewer:
+    """
+    Draws one world and handles keys/mouse.
+    Does not poll for events itself.
+    Calls input_subscriber.on_{key_pressed|mouse_moved}() methods on key/mouse input.
+    Calls draw_subscriber.on_draw_{background|cells|hud}() methods when drawing.
+    """
+
     INFO_SIZE = 300
 
     def __init__(self, world):
@@ -58,10 +65,15 @@ class WorldViewer:
         window.show_all()
 
     def focus_client(self, client):
+        """Follow this client regarding center and zoom."""
         self.client = client
         self.world = client.world
 
     def show_full_world(self, world=None):
+        """
+        Show the full world view instead of one client.
+        :param world: optionally update the drawn world
+        """
         self.client = None
         if world:
             self.world = world
