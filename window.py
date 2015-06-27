@@ -191,6 +191,11 @@ class WorldViewer:
             c.rectangle(*as_rect(minimap_offset, size=minimap_size))
             c.stroke()
 
+            # the area visible in window
+            c.rectangle(*as_rect(world_to_mm(self.screen_to_world_pos(Vec(0,0))),
+                                 world_to_mm(self.screen_to_world_pos(self.win_size))))
+            c.stroke()
+
             for cell in world.cells.values():
                 draw_circle_outline(c, world_to_mm(cell.pos),
                                     cell.size * minimap_scale,
