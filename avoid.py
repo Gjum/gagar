@@ -24,6 +24,7 @@ class Avoid:
         self.prev_cells = {}
         self.paths = []
         self.cell_info = {}
+        self.flee_tolerance = 5
 
     def on_ingame(self):
         self.client.player.nick = random.choice(special_names)
@@ -65,30 +66,38 @@ class Avoid:
                 c.line_to(*w.world_to_screen_pos(new_cell.pos))
                 c.stroke()
 
-            # paths
-            c.set_source_rgba(1,1,1, .2)
-            drawn = []
-            for _, path in self.paths[1:]:
-                c_prev = None
-                for cell in path:
-                    c_from_to = (c_prev, cell)
-                    if c_prev and c_from_to not in drawn:
-                        c.move_to(*w.world_to_screen_pos(c_prev.pos))
-                        c.line_to(*w.world_to_screen_pos(cell.pos))
-                        c.stroke()
-                        drawn.append(c_from_to)
-                    c_prev = cell
+            if self.flee_tolerance < 10:
+                # paths
+                c.set_source_rgba(1,1,1, .2)
+                drawn = []
+                for _, path in self.paths[1:]:
+                    c_prev = None
+                    for cell in path:
+                        c_from_to = (c_prev, cell)
+                        if c_prev and c_from_to not in drawn:
+                            c.move_to(*w.world_to_screen_pos(c_prev.pos))
+                            c.line_to(*w.world_to_screen_pos(cell.pos))
+                            c.stroke()
+                            drawn.append(c_from_to)
+                        c_prev = cell
 
-            if self.paths:
-                # first (active) path
-                c.set_source_rgba(0,1,0, 1)
-                c_prev = None
-                for cell in self.paths[0][1]:
-                    if c_prev:
-                        c.move_to(*w.world_to_screen_pos(c_prev.pos))
-                        c.line_to(*w.world_to_screen_pos(cell.pos))
-                        c.stroke()
-                    c_prev = cell
+                if self.paths:
+                    # first (active) path
+                    c.set_source_rgba(0,1,0, 1)
+                    c_prev = None
+                    for cell in self.paths[0][1]:
+                        if c_prev:
+                            c.move_to(*w.world_to_screen_pos(c_prev.pos))
+                            c.line_to(*w.world_to_screen_pos(cell.pos))
+                            c.stroke()
+                        c_prev = cell
+
+            else:
+                for cell in self.data.hostile + self.data.dangerous:
+                    speed = cell_speed(cell)
+                    radius = self.flee_tolerance * speed + cell.size
+                    draw_circle_outline(c, w.world_to_screen_pos(cell.pos),
+                                        radius * w.screen_scale, (1,0,0))
 
     def get_prev_cell(self, new_cell):
         if new_cell.cid in self.prev_cells:
@@ -135,6 +144,7 @@ class Avoid:
             elif cell.mass > d.min_mass * 1.25 * 2:
                 d.hostile.append(cell)
 
+        self.data = d
         return d
 
     def on_world_update_post(self):
@@ -156,25 +166,24 @@ class Avoid:
             for cell in d.hostile + d.dangerous:
                 speed = cell_speed(cell)
                 dist = (own_cell.pos - cell.pos).len()
-                if 3*speed < dist - cell.size:
+                if self.flee_tolerance * speed < dist - cell.size:
                     continue  # too far away
                 try:
                     delta = (own_cell.pos - cell.pos).set_len(speed)
                     md += delta
+                    self.flee_tolerance = 10
                 except ZeroDivisionError:
                     pass
 
             if md:
-                print('fleeing')
                 self.movement_delta = md * own_cell.size
                 self.client.send_mouse(*self.mouse_world)
                 return
+            else:
+                self.flee_tolerance = 5
 
         if not d.food:
-            print('no path')
             return  # TODO find any target
-
-        print('eating food')
 
         depth = 3
         breadth = 4
