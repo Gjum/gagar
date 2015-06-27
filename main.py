@@ -345,7 +345,7 @@ class GtkControl(Subscriber):
         # watch websocket in GTK main loop
         # `or True` is for always returning True to keep watching
         GLib.io_add_watch(client.ws, GLib.IO_IN, lambda ws, _: client.on_message() or True)
-        GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, __: multi_sub.sock_error() or True)
+        GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, __: client.subscriber.on_sock_error() or True)
         GLib.io_add_watch(client.ws, GLib.IO_HUP, lambda ws, __: client.disconnect() or True)
 
         self.world_viewer = wv = WorldViewer(client.world)
