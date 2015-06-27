@@ -121,6 +121,10 @@ class Client(object):
     def world(self, world):
         self.player.world = world
 
+    @property
+    def is_connected(self):
+        return self.ws.connected
+
     def connect(self, url=None, token=None):
         """
         Connect the underlying websocket to the url, send a handshake and optionally a token packet.
@@ -129,7 +133,7 @@ class Client(object):
         :param token: unique token, required by official servers, acquired through find_server()
         :return: True if connected, False if not
         """
-        if self.ws.connected:
+        if self.is_connected:
             self.subscriber.on_log_msg('Already connected to "%s"' % self.url)
             return False
 
@@ -143,13 +147,13 @@ class Client(object):
 
         self.ws.connect(self.url, timeout=1, origin='http://agar.io',
                         header=moz_headers)
-        if not self.ws.connected:
+        if not self.is_connected:
             self.subscriber.on_log_msg('Failed to connect to "%s"' % self.url)
             return False
 
         self.subscriber.on_sock_open()
         # allow handshake canceling
-        if not self.ws.connected:
+        if not self.is_connected:
             self.subscriber.on_log_msg('Disconnected before sending handshake')
             return False
 
@@ -190,7 +194,7 @@ class Client(object):
     def listen(self):
         """Set up a quick connection. Returns on disconnect."""
         import select
-        while self.ws.connected:
+        while self.is_connected:
             r, w, e = select.select((self.ws.sock, ), (), ())
             if r:
                 self.on_message()
@@ -350,7 +354,7 @@ class Client(object):
         self.subscriber.on_debug_line(x=x, y=y)
 
     def send_struct(self, fmt, *data):
-        if self.ws.connected:
+        if self.is_connected:
             self.ws.send(struct.pack(fmt, *data))
 
     def send_handshake(self):
