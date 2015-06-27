@@ -48,6 +48,13 @@ def frange(start, end, step):
 def to_rgba(c, a):
     return c[0], c[1], c[2], a
 
+def as_rect(tl, br=None, size=None):
+    """Make tuple from 2 Vecs. Either bottom-right or rect size must be given."""
+    if size:
+        return tl.x, tl.y, size.x, size.y
+    else:
+        return tl.x, tl.y, br.x-tl.x, br.y-tl.y
+
 def draw_text_center(c, center, text, *args, **kwargs):
     try:
         x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \

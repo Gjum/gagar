@@ -107,14 +107,14 @@ class WorldViewer:
         alloc = self.drawing_area.get_allocation()
         self.win_size.set(alloc.width, alloc.height)
         self.screen_center = self.win_size / 2
-        if self.client:
+        if self.client:  # any client is focused
             window_scale = max(self.win_size.x / 1920, self.win_size.y / 1080)
             self.screen_scale = self.client.player.scale * window_scale
             self.world_center = self.client.player.center
             self.world = self.client.world
         elif self.world.size:
             self.screen_scale = min(self.win_size.x / self.world.size.x,
-                              self.win_size.y / self.world.size.y)
+                                    self.win_size.y / self.world.size.y)
             self.world_center = self.world.center
         else:
             # happens when the window gets drawn before the world got updated
@@ -176,19 +176,23 @@ class WorldViewer:
         # minimap
         if world.size:
             minimap_w = self.win_size.x / 5
+            minimap_size = Vec(minimap_w, minimap_w)
+            minimap_scale = minimap_size.x / world.size.x
+            minimap_offset = self.win_size - minimap_size
+
+            def world_to_mm(world_pos):
+                return minimap_offset + (world_pos - world.top_left) * minimap_scale
+
             line_width = c.get_line_width()
             c.set_line_width(1)
 
+            # minimap border
             c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
-            c.rectangle(self.win_size.x-minimap_w, self.win_size.y-minimap_w,
-                        minimap_w, minimap_w)
+            c.rectangle(*as_rect(minimap_offset, size=minimap_size))
             c.stroke()
 
-            minimap_scale = minimap_w / world.size.x
             for cell in world.cells.values():
-                pos = (cell.pos - world.top_left) * minimap_scale
-                pos += self.win_size - Vec(minimap_w, minimap_w)
-                draw_circle_outline(c, pos,
+                draw_circle_outline(c, world_to_mm(cell.pos),
                                     cell.size * minimap_scale,
                                     color=to_rgba(cell.color, .8))
 
