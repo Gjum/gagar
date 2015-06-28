@@ -4,8 +4,6 @@ from client import special_names
 from drawing_helpers import *
 from vec import Vec
 
-def nearest_from(pos, cells):
-    return sorted(((pos - c.pos).lensq(), c) for c in cells)
 
 def cell_speed(cell):
     return 30 * cell.mass ** (-1/4.5)
@@ -14,15 +12,14 @@ def cell_speed(cell):
 class Avoid:
     def __init__(self, client, key_movement_lines=ord('l')):
         self.client = client
-        self.movement_delta = Vec()#100, 200)
-        self.show_lines = True
         self.key_movement_lines = key_movement_lines
+        self.show_lines = True
 
-        self.prev_cells = {}
-        self.paths = []
-        self.cell_info = {}
-        self.flee_tolerance = 5
         self.respawn_timeout = 0  # ticks to wait before sending next respawn
+        self.prev_cells = {}
+        self.target_pos = Vec()
+        self.flee_intolerance = 5  # ticks to look ahead for cell collision
+        self.paths = []
 
     def respawn(self):
         if self.respawn_timeout > 0:
@@ -45,13 +42,6 @@ class Avoid:
 
     def on_draw_cells(self, c, w):
         if self.show_lines:
-            mouse_pos = w.world_to_screen_pos(self.mouse_world)
-            c.set_source_rgba(*to_rgba(BLACK, .3))
-            for cell in self.client.player.own_cells:
-                c.move_to(*w.world_to_screen_pos(cell.pos))
-                c.line_to(*mouse_pos)
-                c.stroke()
-
             for new_cell in self.client.player.world.cells.values():
                 if new_cell.cid in self.client.player.own_ids:
                     continue
@@ -65,38 +55,39 @@ class Avoid:
                 c.line_to(*w.world_to_screen_pos(new_cell.pos))
                 c.stroke()
 
-            if self.flee_tolerance < 10:
-                # paths
-                c.set_source_rgba(1,1,1, .2)
-                drawn = []
-                for _, path in self.paths[1:]:
-                    c_prev = None
-                    for cell in path:
-                        c_from_to = (c_prev, cell)
-                        if c_prev and c_from_to not in drawn:
-                            c.move_to(*w.world_to_screen_pos(c_prev.pos))
-                            c.line_to(*w.world_to_screen_pos(cell.pos))
-                            c.stroke()
-                            drawn.append(c_from_to)
-                        c_prev = cell
-
-                if self.paths:
-                    # first (active) path
-                    c.set_source_rgba(0,1,0, 1)
-                    c_prev = None
-                    for cell in self.paths[0][1]:
-                        if c_prev:
-                            c.move_to(*w.world_to_screen_pos(c_prev.pos))
-                            c.line_to(*w.world_to_screen_pos(cell.pos))
-                            c.stroke()
-                        c_prev = cell
-
-            else:
+            if self.flee_intolerance > 5:
+                # fleeing circles
                 for cell in self.data.hostile + self.data.dangerous:
                     speed = cell_speed(cell)
-                    radius = self.flee_tolerance * speed + cell.size
+                    radius = self.flee_intolerance * speed + cell.size
                     draw_circle_outline(c, w.world_to_screen_pos(cell.pos),
                                         radius * w.screen_scale, (1,0,0))
+            elif self.paths:
+                # paths
+                # draw first (actively followed) path in green
+                c.set_source_rgba(0,1,0, 1)
+                drawn_edges = []
+                for _, path in self.paths:
+                    prev_pos = self.client.player.center
+                    for cell in path:
+                        edge_from_to = (prev_pos, cell.pos)
+                        if edge_from_to not in drawn_edges:
+                            drawn_edges.append(edge_from_to)
+                            c.move_to(*w.world_to_screen_pos(prev_pos))
+                            c.line_to(*w.world_to_screen_pos(cell.pos))
+                            c.stroke()
+                        prev_pos = cell.pos
+                    # draw all in gray except first path
+                    c.set_source_rgba(1,1,1, .2)
+
+            # highlight target and movement directions
+            mouse_pos = w.world_to_screen_pos(self.target_pos)
+            c.set_source_rgba(*to_rgba(BLACK, .3))
+            for cell in self.client.player.own_cells:
+                c.move_to(*w.world_to_screen_pos(cell.pos))
+                c.line_to(*mouse_pos)
+                c.stroke()
+            draw_circle(c, mouse_pos, 5, WHITE)
 
     def get_prev_cell(self, new_cell):
         if new_cell.cid in self.prev_cells:
@@ -153,6 +144,7 @@ class Avoid:
 
         if not p.is_alive:
             self.respawn()
+            self.client.subscriber.on_update_msg('dead, respawning...', 1)
             return
 
         d = self.collect_tick_data()
@@ -162,30 +154,41 @@ class Avoid:
         # we should avoid all cells in can_eat and deadly_viruses,
         #    maybe in can_splitkill
 
-        if d.hostile or d.dangerous:
-            md = Vec()
-            own_cell, *_ = p.own_cells
+        num_fleeing = 0
+        md = Vec()
+        own_cell, *_ = p.own_cells
+        if d.hostile or d.dangerous:  # check if fleeing necessary
             for cell in d.hostile + d.dangerous:
                 speed = cell_speed(cell)
                 dist = (own_cell.pos - cell.pos).len()
-                if self.flee_tolerance * speed < dist - cell.size:
+                if self.flee_intolerance * speed < dist - cell.size:
                     continue  # too far away
                 try:
-                    delta = (own_cell.pos - cell.pos).set_len(speed)
-                    md += delta
-                    self.flee_tolerance = 10
+                    md += (own_cell.pos - cell.pos).set_len(speed)
+                    num_fleeing += 1
+                    # increase intolerance if necessary
+                    self.flee_intolerance = max(10 * num_fleeing, self.flee_intolerance)
                 except ZeroDivisionError:
                     pass
 
-            if md:
-                self.movement_delta = md * own_cell.size
-                self.client.send_mouse(*self.mouse_world)
-                return
-            else:
-                self.flee_tolerance = 5
+        if num_fleeing > 0:
+            self.target_pos = own_cell.pos + md * own_cell.size
+            self.client.subscriber.on_update_msg('fleeing from %i' % num_fleeing, 1)
+        else:  # not fleeing
+            self.flee_intolerance = 5
+            self.calc_food_target(d)
 
+        self.client.send_target(*self.target_pos)
+
+    def calc_food_target(self, d):
         if not d.food:
-            return  # TODO find any target
+            self.client.subscriber.on_update_msg('no food to go after', 1)
+            return
+
+        def nearest_from(pos, cells):
+            return sorted(((pos - c.pos).lensq(), c) for c in cells)
+
+        p = self.client.player
 
         depth = 3
         breadth = 4
@@ -202,7 +205,7 @@ class Avoid:
         self.paths = paths
 
         try:
-            self.client.send_mouse(*paths[0][1][1].pos)
+            self.target_pos = paths[0][1][1].pos
+            self.client.subscriber.on_update_msg('eating food, depth: %i, paths: %i' % (depth, len(paths)), 1)
         except IndexError:
-            print('err lol')
-
+            self.client.subscriber.on_update_msg('no path found', 1)
