@@ -4,9 +4,6 @@ from client import special_names
 from drawing_helpers import *
 from vec import Vec
 
-# TODO highlight eatable, can_eat, ...
-# TODO weighted distraction from can_eat
-
 def nearest_from(pos, cells):
     return sorted(((pos - c.pos).lensq(), c) for c in cells)
 
@@ -25,18 +22,20 @@ class Avoid:
         self.paths = []
         self.cell_info = {}
         self.flee_tolerance = 5
+        self.respawn_timeout = 0  # ticks to wait before sending next respawn
+
+    def respawn(self):
+        if self.respawn_timeout > 0:
+            return  # wait until it is decreased in on_world_update_post()
+        self.respawn_timeout = 25  # xxx could be anything really
+        self.client.player.nick = random.choice(special_names)
+        self.client.send_respawn()
 
     def on_ingame(self):
-        self.client.player.nick = random.choice(special_names)
-        self.client.send_respawn()
+        self.respawn()
 
     def on_death(self):
-        self.client.player.nick = random.choice(special_names)
-        self.client.send_respawn()
-
-    @property
-    def mouse_world(self):
-        return self.client.player.center + self.movement_delta
+        self.respawn()
 
     def on_key_pressed(self, val, char):
         if char == 'k':
@@ -148,10 +147,13 @@ class Avoid:
         return d
 
     def on_world_update_post(self):
+        if True or self.respawn_timeout > 0: self.respawn_timeout -= 1
+
         p = self.client.player
 
         if not p.is_alive:
-            return  # dead, wait for respawn
+            self.respawn()
+            return
 
         d = self.collect_tick_data()
 
