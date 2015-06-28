@@ -194,8 +194,8 @@ class Logger(Subscriber):
             except UnicodeEncodeError:
                 pass
 
-    def on_update_msg(self, msg):
-        self.on_log_msg(msg=msg, update=9)
+    def on_update_msg(self, msg, update=9):
+        self.on_log_msg(msg=msg, update=update)
 
     def on_sock_open(self):
         # remove ws://
@@ -326,6 +326,22 @@ class FpsMeter(Subscriber):
         self.draw_times.appendleft(dt)
 
 
+def gtk_watch_client(client):
+    # watch clinet's websocket in GTK main loop
+    # `or True` is for always returning True to keep watching
+    GLib.io_add_watch(client.ws, GLib.IO_IN, lambda ws, _: client.on_message() or True)
+    GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, __: client.subscriber.on_sock_error() or True)
+    GLib.io_add_watch(client.ws, GLib.IO_HUP, lambda ws, __: client.disconnect() or True)
+
+
+def gtk_main_loop():
+    # Gtk.main() swallows exceptions, get them back
+    import sys
+    sys.excepthook = lambda *args: sys.__excepthook__(*args) or sys.exit()
+
+    Gtk.main()
+
+
 class GtkControl(Subscriber):
     def __init__(self):
         multi_sub = MultiSubscriber(self)
@@ -342,21 +358,11 @@ class GtkControl(Subscriber):
         client.player.nick = random.choice(special_names)
         client.connect_retry()
 
-        # watch websocket in GTK main loop
-        # `or True` is for always returning True to keep watching
-        GLib.io_add_watch(client.ws, GLib.IO_IN, lambda ws, _: client.on_message() or True)
-        GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, __: client.subscriber.on_sock_error() or True)
-        GLib.io_add_watch(client.ws, GLib.IO_HUP, lambda ws, __: client.disconnect() or True)
+        gtk_watch_client(client)
 
         self.world_viewer = wv = WorldViewer(client.world)
         wv.draw_subscriber = wv.input_subscriber = multi_sub
         wv.focus_client(client)
-
-        # Gtk.main() swallows exceptions, get them back
-        import sys
-        sys.excepthook = lambda *args: sys.__excepthook__(*args) or sys.exit()
-
-        Gtk.main()
 
     def on_world_update_post(self):
         self.world_viewer.drawing_area.queue_draw()
@@ -380,5 +386,6 @@ if __name__ == '__main__':
           "This program comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see LICENSE.txt for details.\n")
-    
+
     GtkControl()
+    gtk_main_loop()

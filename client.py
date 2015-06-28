@@ -232,8 +232,7 @@ class Client(object):
         # we keep the previous world state, so
         # handlers can print names, check own_ids, ...
 
-        player = self.player
-        cells = player.world.cells
+        cells = self.player.world.cells
 
         # ca eats cb
         for i in range(buf.pop_uint16()):
@@ -279,10 +278,10 @@ class Client(object):
             if cid in cells:
                 self.subscriber.on_cell_removed(cid=cid)
                 del cells[cid]
-                if cid in player.own_ids:  # own cells joined
-                    player.own_ids.remove(cid)
+                if cid in self.player.own_ids:  # own cells joined
+                    self.player.own_ids.remove(cid)
 
-        player.cells_changed()
+        self.player.cells_changed()
 
         self.subscriber.on_world_update_post()
 
