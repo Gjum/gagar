@@ -1,5 +1,6 @@
 import copy
 import random
+import time
 from client import special_names
 from drawing_helpers import *
 from vec import Vec
@@ -20,6 +21,7 @@ class Avoid:
         self.target_pos = Vec()
         self.flee_intolerance = 5  # ticks to look ahead for cell collision
         self.paths = []
+        self.keep_paths_step = 50
 
     def respawn(self):
         if self.respawn_timeout > 0:
@@ -185,27 +187,52 @@ class Avoid:
             self.client.subscriber.on_update_msg('no food to go after', 1)
             return
 
-        def nearest_from(pos, cells):
-            return sorted(((pos - c.pos).lensq(), c) for c in cells)
+        # fast sorting because only the first few (num) are needed
+        def nearest_from(pos, cells, num, skip=[]):
+            nearest = []
+            for c in cells:
+                if c in skip: continue
+                cd = (pos - c.pos).lensq()
+                if len(nearest) < num:
+                    nearest.append((cd, c))
+                    # print(' '.join('%i' % d for d, c in nearest))
+                    nearest.sort()
+                else:
+                    nd, n = nearest[-1]
+                    if cd < nd:
+                        nearest[-1] = (cd, c)
+                        nearest.sort()
+                        # print(' '.join('%i' % d for d, c in nearest))
+            return nearest
 
         p = self.client.player
 
-        depth = 3
-        breadth = 4
-
+        start_time = time.time()
+        breadth = 10
         paths = [(0, [cell]) for cell in p.own_cells]
-        for i in range(min(len(d.food), depth)):
+        outatime = False
+        for depth in range(len(d.food)):
             new_paths = []
             for dist, p_cells in paths:
                 last_pos = p_cells[-1].pos
-                for add_dist, c_next in nearest_from(last_pos, d.food)[:breadth]:
-                    if c_next not in p_cells:
-                        new_paths.append((dist + add_dist, p_cells + [c_next]))
-            paths = new_paths
+                for add_dist, c_next in nearest_from(last_pos, d.food, breadth, p_cells):
+                    new_paths.append((dist + add_dist, p_cells + [c_next]))
+                    outatime = start_time + .5/25. < time.time()
+                    if outatime: break
+                if outatime: break
+            if outatime: break
+            if not new_paths:
+                break
+            paths = new_paths[:self.keep_paths_step]
         self.paths = paths
 
+        if depth > 5:
+            self.keep_paths_step += 10
+        else:
+            self.keep_paths_step = max(10, int(.5 * self.keep_paths_step))
+
         try:
-            self.target_pos = paths[0][1][1].pos
-            self.client.subscriber.on_update_msg('eating food, depth: %i, paths: %i' % (depth, len(paths)), 1)
+            self.target_pos = self.paths[0][1][1].pos
+            self.client.subscriber.on_update_msg('eating food, depth: %i, keep: %i' % (depth, self.keep_paths_step), 1)
         except IndexError:
             self.client.subscriber.on_update_msg('no path found', 1)
