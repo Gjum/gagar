@@ -400,3 +400,7 @@ class Client(object):
 
     def send_explode(self):
         self.send_struct('<B', 20)
+        self.player.own_ids.clear()
+        self.player.cells_changed()
+        self.ingame = False
+        self.subscriber.on_death()
