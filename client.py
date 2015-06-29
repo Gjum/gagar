@@ -175,7 +175,6 @@ class Client(object):
         old_nick = self.player.nick
         self.player = Player()
         self.player.nick = old_nick
-        self.subscriber.on_ingame()
         return True
 
     def connect_retry(self, url=None, token=None, tries=-1):
@@ -340,6 +339,7 @@ class Client(object):
         self.player.world.top_left = Vec(top, left)
         self.player.world.bottom_right = Vec(bottom, right)
         self.player.center = self.world.center
+        self.subscriber.on_ingame()
 
     def parse_spectate_update(self, buf):
         # only in spectate mode
