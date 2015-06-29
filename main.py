@@ -343,7 +343,7 @@ def gtk_main_loop():
 
 
 class GtkControl(Subscriber):
-    def __init__(self):
+    def __init__(self, url=None, token=None):
         multi_sub = MultiSubscriber(self)
 
         self.client = client = Client(multi_sub)
@@ -356,7 +356,7 @@ class GtkControl(Subscriber):
         multi_sub.sub(FpsMeter(50))
 
         client.player.nick = random.choice(special_names)
-        client.connect_retry()
+        client.connect_retry(url, token)
 
         gtk_watch_client(client)
 
