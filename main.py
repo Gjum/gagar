@@ -387,5 +387,8 @@ if __name__ == '__main__':
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see LICENSE.txt for details.\n")
 
-    GtkControl()
+    import sys
+    url, token, *_ = sys.argv[1:] + ([None] * 2)
+
+    GtkControl(url, token)
     gtk_main_loop()
