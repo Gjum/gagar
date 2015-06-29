@@ -30,6 +30,29 @@ from buffer import BufferStruct, BufferUnderflowError
 from vec import Vec
 from world import Player
 
+packet_s2c = {
+    16: 'world_update',
+    17: 'spectate_update',
+    20: 'clear_cells',
+    21: 'debug_line',
+    32: 'own_id',
+    49: 'leaderboard_names',
+    50: 'leaderboard_groups',
+    64: 'world_rect',
+}
+
+packet_c2s = {
+      0: 'respawn',
+      1: 'spectate',
+     16: 'mouse',
+     17: 'split',
+     18: 'shoot',
+     20: 'explode',
+     80: 'token',
+    254: 'handshake1',
+    255: 'handshake2',
+}
+
 special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'germany;ukraine;france;sweden;hitler;north korea;' \
                 'south korea;japan;united kingdom;earth;greece;latvia;' \
@@ -54,7 +77,6 @@ moz_headers = [
     'Origin: http://agar.io',
     'Referer: http://agar.io',
 ]
-
 
 handshake_version = 154669603  # TODO extract at runtime, changing sometimes
 
@@ -91,17 +113,6 @@ def gcommer(server=None):
 
 class Client(object):
     """Talks to a server and calls handlers on events."""
-
-    packet_dict = {
-        16: 'world_update',
-        17: 'spectate_update',
-        20: 'clear_cells',
-        21: 'debug_line',
-        32: 'own_id',
-        49: 'leaderboard_names',
-        50: 'leaderboard_groups',
-        64: 'world_rect',
-    }
 
     def __init__(self, subscriber):
         """
@@ -214,7 +225,7 @@ class Client(object):
         buf = BufferStruct(msg)
         opcode = buf.pop_uint8()
         try:
-            packet_name = self.packet_dict[opcode]
+            packet_name = packet_s2c[opcode]
         except KeyError:
             self.subscriber.on_log_msg('ERROR unknown packet %s' % opcode)
             return
