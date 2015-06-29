@@ -53,6 +53,9 @@ packet_c2s = {
     255: 'handshake2',
 }
 
+ingame_packets = ('world_rect', 'world_update', 'leaderboard_names',
+                  'leaderboard_groups', 'spectate_update', 'own_id')
+
 special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
                 'germany;ukraine;france;sweden;hitler;north korea;' \
                 'south korea;japan;united kingdom;earth;greece;latvia;' \
@@ -123,6 +126,7 @@ class Client(object):
         self.ws = websocket.WebSocket()
         self.url = ''
         self.token = ''
+        self.ingame = False
 
     @property
     def world(self):
@@ -156,6 +160,7 @@ class Client(object):
             ip_port, self.token, *extra = find_server()
             self.url = 'ws://%s' % ip_port
 
+        self.ingame = False
         self.ws.connect(self.url, timeout=1, origin='http://agar.io',
                         header=moz_headers)
         if not self.is_connected:
@@ -198,6 +203,7 @@ class Client(object):
 
     def disconnect(self):
         self.ws.close()
+        self.ingame = False
         self.subscriber.on_sock_closed()
         # keep player/world data
 
@@ -228,6 +234,9 @@ class Client(object):
         except KeyError:
             self.subscriber.on_log_msg('ERROR unknown packet %s' % opcode)
             return
+        if not self.ingame and packet_name in ingame_packets:
+            self.subscriber.on_ingame()
+            self.ingame = True
         parser = getattr(self, 'parse_%s' % packet_name)
         try:
             parser(buf)
@@ -339,7 +348,6 @@ class Client(object):
         self.player.world.top_left = Vec(top, left)
         self.player.world.bottom_right = Vec(bottom, right)
         self.player.center = self.world.center
-        self.subscriber.on_ingame()
 
     def parse_spectate_update(self, buf):
         # only in spectate mode
