@@ -285,8 +285,8 @@ class Client(object):
             for i in range(skips): buf.pop_uint8()
             cname = buf.pop_str()
             self.subscriber.on_cell_info(cid=cid, x=cx, y=cy,
-                                   size=csize, name=cname, color=color,
-                                   is_virus=is_virus, is_agitated=is_agitated)
+                                         size=csize, name=cname, color=color,
+                                         is_virus=is_virus, is_agitated=is_agitated)
             cells[cid].__init__(cid=cid, x=cx, y=cy,
                                 size=csize, name=cname, color=color,
                                 is_virus=is_virus, is_agitated=is_agitated)
