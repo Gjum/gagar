@@ -248,6 +248,8 @@ class Client(object):
             raise e
 
     def parse_world_update(self, buf):
+        self.subscriber.on_world_update_pre()
+
         # we keep the previous world state, so
         # handlers can print names, check own_ids, ...
 
