@@ -105,7 +105,7 @@ class Vec(object):
         return math.sqrt(self.lensq())
 
     def set_len(self, new_len):
-        self.imul(new_len / self.len())
+        return self.imul(new_len / self.len())
 
     def unit(self):
         lensq = self.lensq()
