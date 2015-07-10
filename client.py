@@ -81,14 +81,23 @@ moz_headers = [
     'Referer: http://agar.io',
 ]
 
-handshake_version = 154669603  # TODO extract at runtime, changing sometimes
+
+handshake_version = 154669603
 
 
-def find_server(region='EU-London'):
+def find_server(region='EU-London', mode=None):
+    if mode: region = '%s:%s' % (region, mode)
     opener = request.build_opener()
     opener.addheaders = [h.split(': ') for h in moz_headers]
-    data = '%s\n%i' % (region, handshake_version)
+    data = '%s\n%s' % (region, handshake_version)
     return opener.open('http://m.agar.io/', data=data.encode()) \
+            .read().decode().split('\n')
+
+
+def get_party_ip(party_token):
+    opener = request.build_opener()
+    opener.addheaders = [h.split(': ') for h in moz_headers]
+    return opener.open('http://m.agar.io/getToken', data=party_token.encode()) \
             .read().decode().split('\n')
 
 
