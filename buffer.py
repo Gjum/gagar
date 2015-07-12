@@ -75,6 +75,9 @@ class BufferStruct:
     def pop_uint16(self):
         return self.pop_values('<H')[0]
 
+    def pop_int32(self):
+        return self.pop_values('<i')[0]
+
     def pop_uint32(self):
         return self.pop_values('<I')[0]
 

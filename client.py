@@ -282,8 +282,8 @@ class Client(object):
         while 1:
             cid = buf.pop_uint32()
             if cid == 0: break
-            cx = buf.pop_int16()
-            cy = buf.pop_int16()
+            cx = buf.pop_int32()
+            cy = buf.pop_int32()
             csize = buf.pop_int16()
             color = (buf.pop_uint8(), buf.pop_uint8(), buf.pop_uint8())
             bitmask = buf.pop_uint8()
@@ -387,7 +387,7 @@ class Client(object):
             self.ws.send(struct.pack(fmt, *data))
 
     def send_handshake(self):
-        self.send_struct('<BI', 254, 4)
+        self.send_struct('<BI', 254, 5)
         self.send_struct('<BI', 255, handshake_version)
 
     def send_token(self, token):
@@ -398,7 +398,7 @@ class Client(object):
         self.send_struct('<B%iH' % len(nick), 0, *map(ord, nick))
 
     def send_mouse(self, x, y):
-        self.send_struct('<BddI', 16, x, y, 0)
+        self.send_struct('<BhhI', 16, int(x), int(y), 0)
 
     def send_spectate(self):
         self.send_struct('<B', 1)
