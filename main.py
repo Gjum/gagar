@@ -330,8 +330,8 @@ def gtk_watch_client(client):
     # watch clinet's websocket in GTK main loop
     # `or True` is for always returning True to keep watching
     GLib.io_add_watch(client.ws, GLib.IO_IN, lambda ws, _: client.on_message() or True)
-    GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, __: client.subscriber.on_sock_error() or True)
-    GLib.io_add_watch(client.ws, GLib.IO_HUP, lambda ws, __: client.disconnect() or True)
+    GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, _: client.subscriber.on_sock_error() or True)
+    GLib.io_add_watch(client.ws, GLib.IO_HUP, lambda ws, _: client.disconnect() or True)
 
 
 def gtk_main_loop():
