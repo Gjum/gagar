@@ -153,31 +153,36 @@ class Vec(object):
 
     __neg__ = neg
 
-    def irot(self, angle_degrees):
-        rad = math.radians(angle_degrees)
-        c = math.cos(rad)
-        s = math.sin(rad)
-        self.x = self.x * c - self.y * s
-        self.y = self.x * s + self.y * c
+    def irot(self, angle):
+        c = math.cos(angle)
+        s = math.sin(angle)
+        x = self.x * c - self.y * s
+        y = self.x * s + self.y * c
+        self.x, self.y = x, y
         return self
 
-    def rot(self, angle_degrees):
-        return self.copy().irot(angle_degrees)
+    def rot(self, angle):
+        return self.copy().irot(angle)
 
     def angle(self):
         if self.lensq == 0:
             return 0
-        return math.degrees(math.atan2(self.y, self.x))
+        return math.atan2(self.y, self.x)
 
-    def set_angle(self, angle_degrees):
+    def set_angle(self, angle):
         self.x = self.len()
         self.y = 0
-        self.rot(angle_degrees)
+        self.irot(angle)
+
+    def as_angle(self, angle):
+        self.x = self.len()
+        self.y = 0
+        self.rot(angle)
 
     def angle_to(self, other):
         cross = self.x * other[1] - self.y * other[0]
         dot = self.x * other[0] + self.y * other[1]
-        return math.degrees(math.atan2(cross, dot))
+        return math.atan2(cross, dot)
 
     def __nonzero__(self):
         return bool(self.x or self.y)
