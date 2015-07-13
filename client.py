@@ -397,8 +397,8 @@ class Client(object):
         nick = self.player.nick
         self.send_struct('<B%iH' % len(nick), 0, *map(ord, nick))
 
-    def send_mouse(self, x, y):
-        self.send_struct('<BhhI', 16, int(x), int(y), 0)
+    def send_mouse(self, x, y, cid=0):
+        self.send_struct('<BhhI', 16, int(x), int(y), cid)
 
     def send_spectate(self):
         self.send_struct('<B', 1)
