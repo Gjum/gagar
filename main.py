@@ -45,7 +45,7 @@ class NativeControl(Subscriber):
         return self.client.player.center + self.movement_delta
 
     def send_mouse(self):
-        self.client.send_mouse(*self.mouse_world)
+        self.client.send_target(*self.mouse_world)
 
     def on_world_update_post(self):
         self.send_mouse()
