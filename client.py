@@ -94,7 +94,7 @@ def find_server(region='EU-London', mode=None):
             .read().decode().split('\n')
 
 
-def get_party_ip(party_token):
+def get_party_address(party_token):
     opener = request.build_opener()
     opener.addheaders = [h.split(': ') for h in moz_headers]
     return opener.open('http://m.agar.io/getToken', data=party_token.encode()) \
@@ -133,7 +133,7 @@ class Client(object):
         self.subscriber = subscriber
         self.player = Player()
         self.ws = websocket.WebSocket()
-        self.url = ''
+        self.address = ''
         self.token = ''
         self.ingame = False
 
@@ -149,31 +149,27 @@ class Client(object):
     def is_connected(self):
         return self.ws.connected
 
-    def connect(self, url=None, token=None):
+    def connect(self, address=None, token=None):
         """
-        Connect the underlying websocket to the url, send a handshake and optionally a token packet.
+        Connect the underlying websocket to the address, send a handshake and optionally a token packet.
 
-        :param url: string, `ws://IP:PORT`
+        :param address: string, `IP:PORT`
         :param token: unique token, required by official servers, acquired through find_server()
         :return: True if connected, False if not
         """
         if self.is_connected:
-            self.subscriber.on_log_msg('Already connected to "%s"' % self.url)
+            self.subscriber.on_log_msg('Already connected to "%s"' % self.address)
             return False
 
-        # make sure its a websocket url
-        if url and url[:5] != 'ws://': url = 'ws://%s' % url
-
-        self.url, self.token = url, token
-        if not self.url:
-            ip_port, self.token, *extra = find_server()
-            self.url = 'ws://%s' % ip_port
+        self.address, self.token = address, token
+        if not self.address:
+            self.address, self.token, *_ = find_server()
 
         self.ingame = False
-        self.ws.connect(self.url, timeout=1, origin='http://agar.io',
+        self.ws.connect('ws://%s' % self.address, timeout=1, origin='http://agar.io',
                         header=moz_headers)
         if not self.is_connected:
-            self.subscriber.on_log_msg('Failed to connect to "%s"' % self.url)
+            self.subscriber.on_log_msg('Failed to connect to "%s"' % self.address)
             return False
 
         self.subscriber.on_sock_open()
@@ -191,20 +187,20 @@ class Client(object):
         self.player.nick = old_nick
         return True
 
-    def connect_retry(self, url=None, token=None, tries=-1):
+    def connect_retry(self, address=None, token=None, tries=-1):
         """
         Keep trying to connect, even when the connection gets reset.
 
         Keeps calling Client.connect() while catching any ConnectionResetError.
 
-        :param url: string, `ws://IP:PORT`
+        :param address: string, `IP:PORT`
         :param token: unique token, required by official servers, acquired through find_server()
         :param tries: number of tries before aborting, or -1 to keep trying
         :return: True if connected, False if not
         """
         while tries != 0:
             try:
-                return self.connect(url=url, token=token)
+                return self.connect(address=address, token=token)
             except ConnectionResetError:
                 self.subscriber.on_log_msg('Connection failed, retrying...')
                 tries -= 1

@@ -26,7 +26,7 @@ from time import time
 from gi.repository import Gtk, GLib, Gdk
 import sys
 
-from client import Client, special_names, get_party_ip
+from client import Client, special_names, get_party_address
 from drawing_helpers import *
 from subscriber import MultiSubscriber, Subscriber
 from vec import Vec
@@ -199,8 +199,7 @@ class Logger(Subscriber):
         self.on_log_msg(msg=msg, update=update)
 
     def on_sock_open(self):
-        # remove ws://
-        self.on_update_msg('Connected to %s' % self.client.url[5:])
+        self.on_update_msg('Connected to %s' % self.client.address)
         self.on_update_msg('Token: %s' % self.client.token)
 
     def on_world_rect(self, **kwargs):
@@ -343,7 +342,7 @@ def gtk_main_loop():
 
 
 class GtkControl(Subscriber):
-    def __init__(self, url=None, token=None, nick=None):
+    def __init__(self, address=None, token=None, nick=None):
         if nick is None: nick = random.choice(special_names)
 
         multi_sub = MultiSubscriber(self)
@@ -358,7 +357,7 @@ class GtkControl(Subscriber):
         multi_sub.sub(FpsMeter(50))
 
         client.player.nick = nick
-        client.connect_retry(url, token)
+        client.connect_retry(address, token)
 
         gtk_watch_client(client)
 
@@ -395,16 +394,16 @@ def main():
         print("       %s <IP:port> <token> [nick]" % sys.argv[0])
         return
 
-    url, token, nick, *_ = sys.argv[1:] + ([None] * 3)
+    address, token, nick, *_ = sys.argv[1:] + ([None] * 3)
 
     if token is None:
-        nick = url
-        url = None
+        nick = address
+        address = None
 
-    if url and url[0] in 'Pp':
-        url, *_ = get_party_ip(token)
+    if address and address[0] in 'Pp':
+        address, *_ = get_party_address(token)
 
-    GtkControl(url, token, nick)
+    GtkControl(address, token, nick)
     gtk_main_loop()
 
 
