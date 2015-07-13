@@ -21,9 +21,8 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
 import struct
-from urllib import request
+import urllib.request, urllib.error
 
-from sys import stderr
 import websocket
 
 from buffer import BufferStruct, BufferUnderflowError
@@ -76,9 +75,9 @@ special_names = 'poland;usa;china;russia;canada;australia;spain;brazil;' \
     .split(';')
 
 moz_headers = [
-    'User-Agent: Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0',
-    'Origin: http://agar.io',
-    'Referer: http://agar.io',
+    ('User-Agent', 'Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0'),
+    ('Origin', 'http://agar.io'),
+    ('Referer', 'http://agar.io'),
 ]
 
 
@@ -87,18 +86,21 @@ handshake_version = 154669603
 
 def find_server(region='EU-London', mode=None):
     if mode: region = '%s:%s' % (region, mode)
-    opener = request.build_opener()
-    opener.addheaders = [h.split(': ') for h in moz_headers]
+    opener = urllib.request.build_opener()
+    opener.addheaders = moz_headers
     data = '%s\n%s' % (region, handshake_version)
     return opener.open('http://m.agar.io/', data=data.encode()) \
             .read().decode().split('\n')
 
 
 def get_party_address(party_token):
-    opener = request.build_opener()
-    opener.addheaders = [h.split(': ') for h in moz_headers]
-    return opener.open('http://m.agar.io/getToken', data=party_token.encode()) \
-            .read().decode().split('\n')
+    opener = urllib.request.build_opener()
+    opener.addheaders = moz_headers
+    try:
+        return opener.open('http://m.agar.io/getToken', data=party_token.encode()) \
+                .read().decode().split('\n')
+    except urllib.error.HTTPError:
+        raise ValueError('Invalid token "%s" (maybe timed out after 10min?)' % party_token)
 
 
 def gcommer(server=None):
@@ -111,13 +113,13 @@ def gcommer(server=None):
         # no server specified, just get any server
         # this is only useful for testing, as m.agar.io can also be used for this
         url = 'http://at.gcommer.com/status'
-        text = request.urlopen(url).read().decode()
+        text = urllib.request.urlopen(url).read().decode()
         j = json.loads(text)
         for server, num in j['status'].items():
             if num > 0:
                 break  # server is now one of the listed servers with tokens
     url = 'http://at.gcommer.com/claim?server=%s' % server
-    text = request.urlopen(url).read().decode()
+    text = urllib.request.urlopen(url).read().decode()
     j = json.loads(text)
     token = j['token']
     return server, token
@@ -167,7 +169,7 @@ class Client(object):
 
         self.ingame = False
         self.ws.connect('ws://%s' % self.address, timeout=1, origin='http://agar.io',
-                        header=moz_headers)
+                        header=[': '.join(h)for h in moz_headers])
         if not self.is_connected:
             self.subscriber.on_log_msg('Failed to connect to "%s"' % self.address)
             return False
