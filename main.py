@@ -218,7 +218,7 @@ class Logger(Subscriber):
     def on_world_update_post(self):
         player = self.client.player
         x, y = player.center
-        self.on_update_msg('Size: %i Pos: (%.2f %.2f)' % (player.total_size, x, y))
+        self.on_update_msg('Mass: %i Pos: (%.2f %.2f)' % (player.total_mass, x, y))
 
     def on_own_id(self, cid):
         if len(self.client.player.own_ids) == 1:
