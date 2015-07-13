@@ -24,8 +24,9 @@ import random
 from time import time
 
 from gi.repository import Gtk, GLib, Gdk
+import sys
 
-from client import Client, special_names
+from client import Client, special_names, get_party_ip
 from drawing_helpers import *
 from subscriber import MultiSubscriber, Subscriber
 from vec import Vec
@@ -336,14 +337,15 @@ def gtk_watch_client(client):
 
 def gtk_main_loop():
     # Gtk.main() swallows exceptions, get them back
-    import sys
     sys.excepthook = lambda *args: sys.__excepthook__(*args) or sys.exit()
 
     Gtk.main()
 
 
 class GtkControl(Subscriber):
-    def __init__(self, url=None, token=None):
+    def __init__(self, url=None, token=None, nick=None):
+        if nick is None: nick = random.choice(special_names)
+
         multi_sub = MultiSubscriber(self)
 
         self.client = client = Client(multi_sub)
@@ -355,7 +357,7 @@ class GtkControl(Subscriber):
         multi_sub.sub(MassGraph(client))
         multi_sub.sub(FpsMeter(50))
 
-        client.player.nick = random.choice(special_names)
+        client.player.nick = nick
         client.connect_retry(url, token)
 
         gtk_watch_client(client)
@@ -381,14 +383,30 @@ class GtkControl(Subscriber):
             self.client.connect_retry()
 
 
-if __name__ == '__main__':
+def main():
     print("Copyright (C) 2015  Gjum  <code.gjum@gmail.com>\n"
           "This program comes with ABSOLUTELY NO WARRANTY.\n"
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see LICENSE.txt for details.\n")
 
-    import sys
-    url, token, *_ = sys.argv[1:] + ([None] * 2)
+    if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'):
+        print("Usage: %s [nick]" % sys.argv[0])
+        print("       %s party <token> [nick]" % sys.argv[0])
+        print("       %s <IP:port> <token> [nick]" % sys.argv[0])
+        return
 
-    GtkControl(url, token)
+    url, token, nick, *_ = sys.argv[1:] + ([None] * 3)
+
+    if token is None:
+        nick = url
+        url = None
+
+    if url and url[0] in 'Pp':
+        url, *_ = get_party_ip(token)
+
+    GtkControl(url, token, nick)
     gtk_main_loop()
+
+
+if __name__ == '__main__':
+    main()
