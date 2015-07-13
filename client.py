@@ -378,8 +378,8 @@ class Client(object):
 
     def parse_debug_line(self, buf):
         # TODO debug line packet is untested
-        x = buf.pop_int16()
-        y = buf.pop_int16()
+        x = buf.pop_float64()
+        y = buf.pop_float64()
         self.subscriber.on_debug_line(x=x, y=y)
 
     def send_struct(self, fmt, *data):
