@@ -20,7 +20,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from collections import defaultdict
-from vec import Vec
+from .vec import Vec
 
 
 class Cell(object):

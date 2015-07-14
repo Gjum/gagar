@@ -22,14 +22,14 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 from collections import deque
 import random
 from time import time
-
-from gi.repository import Gtk, GLib, Gdk
 import sys
 
-from client import Client, special_names, get_party_address
+from gi.repository import Gtk, GLib, Gdk
+
+from agario.client import Client, special_names, get_party_address
+from agario.vec import Vec
 from drawing_helpers import *
 from subscriber import MultiSubscriber, Subscriber
-from vec import Vec
 from window import WorldViewer
 
 

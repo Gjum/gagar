@@ -1,11 +1,9 @@
-agar for Python
-===============
+agar.io for Python
+==================
 
-[![Join the chat at https://gitter.im/Gjum/pyAgar.io](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Gjum/pyAgar.io?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://gitter.im/Gjum/agario](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Gjum/agario?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-[agar.io](http://agar.io/) Python client with optional GTK frontend
-
-    python3 main.py
+Python client for the game [agar.io](http://agar.io/) with optional GTK frontend
 
 Requires `pip install websocket-client` module for the headless client
 and GTK for the optional GUI.
@@ -15,6 +13,10 @@ Under Arch Linux, you may also want to run
     pacman -S python-gobject python-cairo pygtk
 
 to install the GTK dependencies. Other distros should have similar packages.
+
+Run the GUI with
+
+    python3 main.py -h
 
 Controls
 --------

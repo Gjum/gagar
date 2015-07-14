@@ -22,7 +22,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 from gi.repository import Gtk, Gdk
 
 from drawing_helpers import *
-from vec import Vec
+from agario.vec import Vec
 
 
 class WorldViewer:

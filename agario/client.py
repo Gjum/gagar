@@ -25,9 +25,9 @@ import urllib.request, urllib.error
 
 import websocket
 
-from buffer import BufferStruct, BufferUnderflowError
-from vec import Vec
-from world import Player
+from .buffer import BufferStruct, BufferUnderflowError
+from .vec import Vec
+from .world import Player
 
 packet_s2c = {
     16: 'world_update',
