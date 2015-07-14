@@ -26,7 +26,8 @@ import sys
 
 from gi.repository import Gtk, GLib, Gdk
 
-from agario.client import Client, special_names, get_party_address
+from agario.client import Client
+from agario.utils import special_names, get_party_address
 from agario.vec import Vec
 from drawing_helpers import *
 from subscriber import MultiSubscriber, Subscriber
