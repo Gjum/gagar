@@ -40,15 +40,44 @@ class NativeControl(Subscriber):
         self.show_movement_lines = True
         self.key_movement_lines = key_movement_lines
 
+        self.move_test = False
+        self.move_test_counter = 0
+
+        class Data:
+            def __getattr__(self, item):
+                return None
+
+        self.d = Data()
+
     @property
     def mouse_world(self):
         return self.client.player.center + self.movement_delta
 
     def send_mouse(self):
-        self.client.send_target(*self.mouse_world)
+        player = self.client.player
+        if self.move_test and len(player.own_ids) >= 2:
+            center = self.mouse_world
+            max_cell = max(player.own_cells, key=lambda c: c.size)
+            min_speed = 30 * max_cell.mass ** (-1/4.5)
+            radius = 4 * max_cell.size
+            tick_angle = min_speed / radius
+            circle_pos = Vec(radius, 0).irot(self.move_test_counter * tick_angle)
+            self.d.center = center.copy()
+            self.d.circle_pos = circle_pos.copy()
+
+            self.d.targets = []
+            for cell in player.own_cells:
+                circle_pos.irot(TWOPI / len(player.own_ids))
+                target = center + circle_pos
+                self.client.send_target(target.x, target.y, cell.cid)
+                self.d.targets.append(target.copy())
+
+        else:
+            self.client.send_target(*self.mouse_world)
 
     def on_world_update_post(self):
         self.send_mouse()
+        self.move_test_counter += 1
 
     def on_mouse_moved(self, pos, pos_world):
         self.movement_delta = pos_world - self.client.player.center
@@ -63,6 +92,8 @@ class NativeControl(Subscriber):
             self.client.send_split()
         elif char == 'k':
             self.client.send_explode()
+        elif char == 'i':
+            self.move_test = not self.move_test
         elif val == self.key_movement_lines:
             self.show_movement_lines = not self.show_movement_lines
 
@@ -74,6 +105,14 @@ class NativeControl(Subscriber):
                 c.move_to(*w.world_to_screen_pos(cell.pos))
                 c.line_to(*mouse_pos)
                 c.stroke()
+
+        try:
+            for t in self.d.targets:
+                draw_circle_outline(c, w.world_to_screen_pos(t), 10, color=RED)
+            draw_circle_outline(c, w.world_to_screen_pos(self.d.center), 10, color=LIGHT_GRAY)
+            draw_circle_outline(c, w.world_to_screen_pos(self.d.circle_pos), 10, color=DARK_GRAY)
+        except (AttributeError, TypeError):
+            pass
 
 
 class CellInfo(Subscriber):
