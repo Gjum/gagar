@@ -23,7 +23,6 @@ import struct
 import websocket
 
 from .buffer import BufferStruct, BufferUnderflowError
-from .utils import find_server
 from .vec import Vec
 from .world import Player
 
@@ -89,7 +88,7 @@ class Client(object):
     def is_connected(self):
         return self.ws.connected
 
-    def connect(self, address=None, token=None):
+    def connect(self, address, token=None):
         """
         Connect the underlying websocket to the address, send a handshake and optionally a token packet.
 
@@ -102,9 +101,6 @@ class Client(object):
             return False
 
         self.address, self.token = address, token
-        if not self.address:
-            self.address, self.token, *_ = find_server()
-
         self.ingame = False
         self.ws.connect('ws://%s' % self.address, timeout=1, origin='http://agar.io',
                         header=[': '.join(h)for h in moz_headers])
@@ -126,25 +122,6 @@ class Client(object):
         self.player = Player()
         self.player.nick = old_nick
         return True
-
-    def connect_retry(self, address=None, token=None, tries=-1):
-        """
-        Keep trying to connect, even when the connection gets reset.
-
-        Keeps calling Client.connect() while catching any ConnectionResetError.
-
-        :param address: string, `IP:PORT`
-        :param token: unique token, required by official servers, acquired through find_server()
-        :param tries: number of tries before aborting, or -1 to keep trying
-        :return: True if connected, False if not
-        """
-        while tries != 0:
-            try:
-                return self.connect(address=address, token=token)
-            except ConnectionResetError:
-                self.subscriber.on_log_msg('Connection failed, retrying...')
-                tries -= 1
-        return False
 
     def disconnect(self):
         self.ws.close()

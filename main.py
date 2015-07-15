@@ -27,7 +27,7 @@ import sys
 from gi.repository import Gtk, GLib, Gdk
 
 from agario.client import Client
-from agario.utils import special_names, get_party_address
+from agario.utils import special_names, get_party_address, find_server
 from agario.vec import Vec
 from drawing_helpers import *
 from subscriber import MultiSubscriber, Subscriber
@@ -343,7 +343,7 @@ def gtk_main_loop():
 
 
 class GtkControl(Subscriber):
-    def __init__(self, address=None, token=None, nick=None):
+    def __init__(self, address, token=None, nick=None):
         if nick is None: nick = random.choice(special_names)
 
         multi_sub = MultiSubscriber(self)
@@ -358,7 +358,7 @@ class GtkControl(Subscriber):
         multi_sub.sub(FpsMeter(50))
 
         client.player.nick = nick
-        client.connect_retry(address, token)
+        client.connect(address, token)
 
         gtk_watch_client(client)
 
@@ -379,8 +379,8 @@ class GtkControl(Subscriber):
             self.client.send_respawn()
         elif char == 'c':  # reconnect to any server
             self.client.disconnect()
-            self.client.player.nick = random.choice(special_names)
-            self.client.connect_retry()
+            address, token, *_ = find_server()
+            self.client.connect(address, token)
 
 
 def main():
@@ -403,6 +403,9 @@ def main():
 
     if address and address[0] in 'Pp':
         address, *_ = get_party_address(token)
+
+    if not address:
+        address, token, *_ = find_server()
 
     GtkControl(address, token, nick)
     gtk_main_loop()
