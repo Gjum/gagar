@@ -102,8 +102,9 @@ class Client(object):
 
         self.address, self.token = address, token
         self.ingame = False
+
         self.ws.connect('ws://%s' % self.address, timeout=1, origin='http://agar.io',
-                        header=[': '.join(h)for h in moz_headers])
+                        header=[': '.join(h) for h in moz_headers])
         if not self.is_connected:
             self.subscriber.on_log_msg('Failed to connect to "%s"' % self.address)
             return False
