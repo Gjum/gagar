@@ -31,7 +31,7 @@ class Subscriber(object):
         return lambda *args, **kwargs: None
 
 
-class MultiSubscriber(object):
+class MultiSubscriber(Subscriber):
     """Distributes method calls to multiple subscribers."""
 
     def __init__(self, *subs):
@@ -43,21 +43,12 @@ class MultiSubscriber(object):
 
     def __getattr__(self, func_name):
         # still throw error when not getting an on_*() method/attribute
-        if 'on_' != func_name[:3]:
-            raise AttributeError("'%s' object has no attribute '%s'"
-                                 % (self.__class__.__name__, func_name))
+        super(self.__class__, self).__getattr__(func_name)
 
         def wrapper(*args, **kwargs):
-            none_called = True
             for sub in self.subs:
                 handler = getattr(sub, func_name, None)
                 if handler:
                     handler(*args, **kwargs)
-                    none_called = False
-            ignored = ['on_cell_info', 'on_cell_removed']
-            if none_called and func_name not in ignored:
-                pass
-                # print('WARNING no subscriber handles %s.%s'
-                #       % (self.__class__.__name__, func_name))
 
         return wrapper
