@@ -28,7 +28,7 @@ class BufferUnderflowError(struct.error):
         self.args = ('Buffer too short: wanted %i %s, got %i %s'
                      % (struct.calcsize(fmt), fmt, len(buf), buf),)
 
-class BufferStruct:
+class BufferStruct(object):
     def __init__(self, message):
         self.buffer = message
 

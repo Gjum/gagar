@@ -25,7 +25,7 @@ from .drawutils import *
 from agario.vec import Vec
 
 
-class WorldViewer:
+class WorldViewer(object):
     """
     Draws one world and handles keys/mouse.
     Does not poll for events itself.

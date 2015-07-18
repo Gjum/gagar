@@ -20,7 +20,7 @@ along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 
-class Subscriber:
+class Subscriber(object):
     """Base class for event handlers via on_*() methods."""
 
     def __getattr__(self, func_name):
@@ -31,7 +31,7 @@ class Subscriber:
         return lambda *args, **kwargs: None
 
 
-class MultiSubscriber:
+class MultiSubscriber(object):
     """Distributes method calls to multiple subscribers."""
 
     def __init__(self, *subs):
