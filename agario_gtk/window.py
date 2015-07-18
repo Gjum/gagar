@@ -130,31 +130,6 @@ class WorldViewer(object):
         if self.draw_subscriber: self.draw_subscriber.on_draw_background(c, self)
 
         world = self.world
-        wl, wt = self.world_to_screen_pos(world.top_left)
-        wr, wb = self.world_to_screen_pos(world.bottom_right)
-
-        # grid
-        c.set_source_rgba(*to_rgba(LIGHT_GRAY, .3))
-        line_width = c.get_line_width()
-        c.set_line_width(.5)
-
-        for y in frange(wt, wb, 50 * self.screen_scale):
-            c.move_to(wl, y)
-            c.line_to(wr, y)
-            c.stroke()
-
-        for x in frange(wl, wr, 50 * self.screen_scale):
-            c.move_to(x, wt)
-            c.line_to(x, wb)
-            c.stroke()
-
-        # world border
-        c.set_line_width(4)
-        c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
-        c.rectangle(wl, wt, wr-wl, wb-wt)
-        c.stroke()
-
-        c.set_line_width(line_width)
 
         # cells
         # reverse to show small over large cells
@@ -167,60 +142,6 @@ class WorldViewer(object):
             elif cell.name:
                 draw_text_center(c, pos, '%s' % cell.name)
 
-        if self.draw_subscriber: self.draw_subscriber.on_draw_cells(c, self)
-
-        # HUD
-
-        if self.draw_subscriber: self.draw_subscriber.on_draw_hud(c, self)
-
-        # minimap
-        if world.size:
-            minimap_w = self.win_size.x / 5
-            minimap_size = Vec(minimap_w, minimap_w)
-            minimap_scale = minimap_size.x / world.size.x
-            minimap_offset = self.win_size - minimap_size
-
-            def world_to_mm(world_pos):
-                return minimap_offset + (world_pos - world.top_left) * minimap_scale
-
-            line_width = c.get_line_width()
-            c.set_line_width(1)
-
-            # minimap border
-            c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
-            c.rectangle(*as_rect(minimap_offset, size=minimap_size))
-            c.stroke()
-
-            # the area visible in window
-            c.rectangle(*as_rect(world_to_mm(self.screen_to_world_pos(Vec(0,0))),
-                                 world_to_mm(self.screen_to_world_pos(self.win_size))))
-            c.stroke()
-
-            for cell in world.cells.values():
-                draw_circle_outline(c, world_to_mm(cell.pos),
-                                    cell.size * minimap_scale,
-                                    color=to_rgba(cell.color, .8))
-
-            c.set_line_width(line_width)
-
-        # leaderboard
-        lb_x = self.win_size.x - self.INFO_SIZE
-
-        c.set_source_rgba(*to_rgba(BLACK, .6))
-        c.rectangle(lb_x, 0,
-                    self.INFO_SIZE, 21 * len(world.leaderboard_names))
-        c.fill()
-
-        player_cid = min(c.cid for c in self.client.player.own_cells) \
-            if self.client and self.client.player.own_ids else -1
-        for rank, (cid, name) in enumerate(world.leaderboard_names):
-            rank += 1  # start at rank 1
-            name = name or 'An unnamed cell'
-            text = '%i. %s (%s)' % (rank, name, cid)
-            if cid == player_cid:
-                color = RED
-            elif cid in world.cells:
-                color = LIGHT_BLUE
-            else:
-                color = WHITE
-            draw_text_left(c, (lb_x+10, 20*rank), text, color=color)
+        if self.draw_subscriber:
+            self.draw_subscriber.on_draw_cells(c, self)
+            self.draw_subscriber.on_draw_hud(c, self)
