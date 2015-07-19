@@ -41,14 +41,11 @@ class NativeControl(Subscriber):
         self.show_movement_lines = True
         self.key_movement_lines = key_movement_lines
 
-    @property
-    def mouse_world(self):
-        return self.client.player.center + self.movement_delta
-
     def send_mouse(self):
-        self.client.send_target(*self.mouse_world)
+        self.client.send_target(*self.client.player.center + self.movement_delta)
 
     def on_world_update_post(self):
+        # keep cells moving even when mouse stands still
         self.send_mouse()
 
     def on_mouse_moved(self, pos, pos_world):
@@ -69,12 +66,11 @@ class NativeControl(Subscriber):
 
     def on_draw_cells(self, c, w):
         if self.show_movement_lines:
-            mouse_pos = w.world_to_screen_pos(self.mouse_world)
             c.set_line_width(1)
             c.set_source_rgba(*to_rgba(BLACK, .3))
             for cell in self.client.player.own_cells:
                 c.move_to(*w.world_to_screen_pos(cell.pos))
-                c.line_to(*mouse_pos)
+                c.line_to(*w.mouse_pos)
                 c.stroke()
 
 
