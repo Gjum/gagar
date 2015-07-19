@@ -47,3 +47,16 @@ class Reloadable(object):
         new_class.__init__(self, **getattr(self, '_init_args', {}))
         for k, v in persistent.items():
             setattr(self, k, v)
+
+    def try_reload(self):
+        """
+        Try to reload the containing module.
+        If an exception is thrown in the process, catch and return it.
+        Useful to catch syntax errors.
+
+        :return the thrown exception if not successfully reloaded, None otherwise
+        """
+        try:
+            self.reload()
+        except Exception as e:
+            return e
