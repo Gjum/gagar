@@ -25,15 +25,16 @@ class Reloadable(object):
             if k == 'self' or k[:2] == '__':
                 del self._init_args[k]
 
-    def reload(self):
+    def reload(self, new_module=None):
         """
         Reloads the containing module and replaces all instance attributes
         (monkey-patching, see https://filippo.io/instance-monkey-patching-in-python/ )
         while keeping the attributes in _persistent_attributes.
         """
-        persistent = {k: getattr(self, k) for k in self._persistent_attributes}
-        new_module = importlib.reload(sys.modules[self.__module__])
+        if not new_module:
+            new_module = importlib.reload(sys.modules[self.__module__])
         new_class = getattr(new_module, self.__class__.__name__)
+        persistent = {k: getattr(self, k) for k in self._persistent_attributes}
         for new_attr_name in dir(new_class):
             if new_attr_name in ('__class__', '__dict__', '__weakref__'):
                 continue  # do not copy '__dict__', '__weakref__'; copy '__class__' below
