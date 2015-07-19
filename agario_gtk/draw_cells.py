@@ -21,16 +21,17 @@ class CellsDrawer(Subscriber):
 class RemergeTimes(Subscriber):
     def __init__(self, player):
         self.player = player
+        self.split_times = {}
 
     def on_own_id(self, cid):
-        self.player.world.cells[cid].split_time = time()
+        self.split_times[cid] = time()
 
     def on_draw_cells(self, c, w):
         if len(self.player.own_ids) <= 1:
             return  # dead or only one cell, no remerge time to display
         now = time()
         for cell in self.player.own_cells:
-            split_for = now - cell.split_time
+            split_for = now - self.split_times[cell.cid]
             # formula by DebugMonkey
             ttr = (self.player.total_mass * 20 + 30000) / 1000 - split_for
             if ttr < 0: continue
