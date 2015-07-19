@@ -35,11 +35,9 @@ from .window import WorldViewer
 
 
 class NativeControl(Subscriber):
-    def __init__(self, client, key_movement_lines=ord('l')):
+    def __init__(self, client):
         self.client = client
         self.movement_delta = Vec()
-        self.show_movement_lines = True
-        self.key_movement_lines = key_movement_lines
 
     def send_mouse(self):
         self.client.send_target(*self.client.player.center + self.movement_delta)
@@ -61,17 +59,6 @@ class NativeControl(Subscriber):
             self.client.send_split()
         elif char == 'k':
             self.client.send_explode()
-        elif val == self.key_movement_lines:
-            self.show_movement_lines = not self.show_movement_lines
-
-    def on_draw_cells(self, c, w):
-        if self.show_movement_lines:
-            c.set_line_width(1)
-            c.set_source_rgba(*to_rgba(BLACK, .3))
-            for cell in self.client.player.own_cells:
-                c.move_to(*w.world_to_screen_pos(cell.pos))
-                c.line_to(*w.mouse_pos)
-                c.stroke()
 
 
 def format_log(lines, width, indent='  '):
@@ -210,6 +197,7 @@ class GtkControl(Subscriber):
         multi_sub.sub(CellHostility())
         multi_sub.sub(CellMasses())
         multi_sub.sub(RemergeTimes(client.player))
+        multi_sub.sub(MovementLines())
 
         # HUD
         multi_sub.sub(Minimap())

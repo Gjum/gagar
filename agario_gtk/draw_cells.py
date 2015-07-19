@@ -81,3 +81,13 @@ class CellHostility(Subscriber):
             c.set_source_rgba(*color)
             draw_circle_outline(c, pos, cell.size * w.screen_scale)
         c.set_line_width(lw)
+
+
+class MovementLines(Subscriber):
+    def on_draw_cells(self, c, w):
+        c.set_line_width(1)
+        c.set_source_rgba(*to_rgba(BLACK, .3))
+        for cell in w.player.own_cells:
+            c.move_to(*w.world_to_screen_pos(cell.pos))
+            c.line_to(*w.mouse_pos)
+            c.stroke()
