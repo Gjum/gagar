@@ -229,6 +229,7 @@ class GtkControl(Subscriber):
             self.client.disconnect()
             address, token, *_ = find_server()
             self.client.connect(address, token)
+            self.world_viewer.focus_player(self.client.player)
 
 
 def main():
