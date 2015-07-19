@@ -48,6 +48,7 @@ class WorldViewer(object):
         self.screen_center = self.win_size / 2
         self.screen_scale = 1
         self.world_center = Vec(0, 0)
+        self.mouse_pos = Vec(0, 0)
 
         window = Gtk.Window()
         window.set_title('agar.io')
@@ -91,9 +92,9 @@ class WorldViewer(object):
     def mouse_moved(self, _, event):
         """Called by GTK. Set input_subscriber to handle this."""
         if not self.input_subscriber: return
-        mouse_pos = Vec(event.x, event.y)
-        pos_world = self.screen_to_world_pos(mouse_pos)
-        self.input_subscriber.on_mouse_moved(pos=mouse_pos, pos_world=pos_world)
+        self.mouse_pos = Vec(event.x, event.y)
+        pos_world = self.screen_to_world_pos(self.mouse_pos)
+        self.input_subscriber.on_mouse_moved(pos=self.mouse_pos, pos_world=pos_world)
 
     def world_to_screen_pos(self, world_pos):
         return (world_pos - self.world_center) \
