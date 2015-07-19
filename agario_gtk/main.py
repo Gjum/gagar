@@ -70,6 +70,7 @@ class NativeControl(Subscriber):
     def on_draw_cells(self, c, w):
         if self.show_movement_lines:
             mouse_pos = w.world_to_screen_pos(self.mouse_world)
+            c.set_line_width(1)
             c.set_source_rgba(*to_rgba(BLACK, .3))
             for cell in self.client.player.own_cells:
                 c.move_to(*w.world_to_screen_pos(cell.pos))

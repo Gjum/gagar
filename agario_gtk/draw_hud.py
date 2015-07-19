@@ -115,6 +115,7 @@ class FpsMeter(Subscriber):
 
     def on_draw_hud(self, c, w):
         if self.show:
+            c.set_line_width(2)
             c.set_source_rgba(*to_rgba(RED, .3))
             for i, t in enumerate(self.draw_times):
                 c.move_to(*(w.win_size - Vec(4*i - 2, 0)))
