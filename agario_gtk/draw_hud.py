@@ -48,8 +48,8 @@ class Leaderboard(Subscriber):
                     w.INFO_SIZE, 21 * len(w.world.leaderboard_names))
         c.fill()
 
-        player_cid = min(c.cid for c in w.client.player.own_cells) \
-            if w.client and w.client.player.own_ids else -1
+        player_cid = min(c.cid for c in w.player.own_cells) \
+            if w.player and w.player.own_ids else -1
 
         for rank, (cid, name) in enumerate(w.world.leaderboard_names):
             rank += 1  # start at rank 1

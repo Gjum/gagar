@@ -37,7 +37,7 @@ class WorldViewer(object):
 
     def __init__(self, world):
         self.world = world
-        self.client = None  # the focused player, or None to show full world
+        self.player = None  # the focused player, or None to show full world
 
         # the class instance on which to call on_key_pressed and on_mouse_moved
         self.input_subscriber = None
@@ -64,17 +64,17 @@ class WorldViewer(object):
 
         window.show_all()
 
-    def focus_client(self, client):
+    def focus_player(self, player):
         """Follow this client regarding center and zoom."""
-        self.client = client
-        self.world = client.world
+        self.player = player
+        self.world = player.world
 
     def show_full_world(self, world=None):
         """
         Show the full world view instead of one client.
         :param world: optionally update the drawn world
         """
-        self.client = None
+        self.player = None
         if world:
             self.world = world
 
@@ -107,11 +107,11 @@ class WorldViewer(object):
         alloc = self.drawing_area.get_allocation()
         self.win_size.set(alloc.width, alloc.height)
         self.screen_center = self.win_size / 2
-        if self.client:  # any client is focused
+        if self.player:  # any client is focused
             window_scale = max(self.win_size.x / 1920, self.win_size.y / 1080)
-            self.screen_scale = self.client.player.scale * window_scale
-            self.world_center = self.client.player.center
-            self.world = self.client.world
+            self.screen_scale = self.player.scale * window_scale
+            self.world_center = self.player.center
+            self.world = self.player.world
         elif self.world.size:
             self.screen_scale = min(self.win_size.x / self.world.size.x,
                                     self.win_size.y / self.world.size.y)

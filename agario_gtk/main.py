@@ -223,7 +223,7 @@ class GtkControl(Subscriber):
 
         self.world_viewer = wv = WorldViewer(client.world)
         wv.draw_subscriber = wv.input_subscriber = multi_sub
-        wv.focus_client(client)
+        wv.focus_player(client.player)
 
     def on_world_update_post(self):
         self.world_viewer.drawing_area.queue_draw()
