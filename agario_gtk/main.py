@@ -208,7 +208,9 @@ class GtkControl(Subscriber):
         multi_sub.sub(GridDrawer())
 
         # cell overlay
-        multi_sub.sub(CellInfo(client))
+        multi_sub.sub(CellHostility())
+        multi_sub.sub(CellMasses())
+        multi_sub.sub(RemergeTimes(client))
 
         # HUD
         multi_sub.sub(Minimap())
