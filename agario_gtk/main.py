@@ -210,7 +210,7 @@ class GtkControl(Subscriber):
         # cell overlay
         multi_sub.sub(CellHostility())
         multi_sub.sub(CellMasses())
-        multi_sub.sub(RemergeTimes(client))
+        multi_sub.sub(RemergeTimes(client.player))
 
         # HUD
         multi_sub.sub(Minimap())

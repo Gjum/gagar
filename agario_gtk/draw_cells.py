@@ -6,21 +6,20 @@ from .drawutils import *
 
 
 class RemergeTimes(Subscriber):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, player):
+        self.player = player
 
     def on_own_id(self, cid):
-        self.client.player.world.cells[cid].split_time = time()
+        self.player.world.cells[cid].split_time = time()
 
     def on_draw_cells(self, c, w):
-        p = self.client.player
-        if len(p.own_ids) <= 1:
+        if len(self.player.own_ids) <= 1:
             return  # dead or only one cell, no remerge time to display
         now = time()
-        for cell in p.own_cells:
+        for cell in self.player.own_cells:
             split_for = now - cell.split_time
             # formula by DebugMonkey
-            ttr = (p.total_mass * 20 + 30000) / 1000 - split_for
+            ttr = (self.player.total_mass * 20 + 30000) / 1000 - split_for
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
             text = 'TTR %.1fs after %.1fs' % (ttr, split_for)
@@ -29,8 +28,7 @@ class RemergeTimes(Subscriber):
 
 class CellMasses(Subscriber):
     def on_draw_cells(self, c, w):
-        p = self.client.player
-        for cell in p.world.cells.values():
+        for cell in w.world.cells.values():
             if cell.is_food or cell.is_ejected_mass:
                 continue
             pos = w.world_to_screen_pos(cell.pos)
@@ -42,16 +40,15 @@ class CellMasses(Subscriber):
 
 class CellHostility(Subscriber):
     def on_draw_cells(self, c, w):
-        p = self.client.player
-        if not p.is_alive: return  # nothing to be hostile against
-        own_min_mass = min(c.mass for c in p.own_cells)
-        own_max_mass = max(c.mass for c in p.own_cells)
+        if not w.player.is_alive: return  # nothing to be hostile against
+        own_min_mass = min(c.mass for c in w.player.own_cells)
+        own_max_mass = max(c.mass for c in w.player.own_cells)
         lw = c.get_line_width()
         c.set_line_width(5)
-        for cell in p.world.cells.values():
+        for cell in w.world.cells.values():
             if cell.is_food or cell.is_ejected_mass:
                 continue  # no threat
-            if cell.cid in p.own_ids:
+            if cell.cid in w.player.own_ids:
                 continue  # own cell, also no threat lol
             pos = w.world_to_screen_pos(cell.pos)
             color = YELLOW
