@@ -5,6 +5,19 @@ from .subscriber import Subscriber
 from .drawutils import *
 
 
+class CellsDrawer(Subscriber):
+    def on_draw_cells(self, c, w):
+        # reverse to show small over large cells
+        for cell in sorted(w.world.cells.values(), reverse=True):
+            pos = w.world_to_screen_pos(cell.pos)
+            draw_circle(c, pos, cell.size * w.screen_scale,
+                        color=to_rgba(cell.color, .8))
+            if cell.is_virus or cell.is_food or cell.is_ejected_mass:
+                pass  # do not draw name/size
+            elif cell.name:
+                draw_text_center(c, pos, '%s' % cell.name)
+
+
 class RemergeTimes(Subscriber):
     def __init__(self, player):
         self.player = player

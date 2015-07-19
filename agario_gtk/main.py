@@ -207,6 +207,8 @@ class GtkControl(Subscriber):
         multi_sub.sub(WorldBorderDrawer())
         multi_sub.sub(GridDrawer())
 
+        multi_sub.sub(CellsDrawer())
+
         # cell overlay
         multi_sub.sub(CellHostility())
         multi_sub.sub(CellMasses())

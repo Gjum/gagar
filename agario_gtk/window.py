@@ -122,26 +122,11 @@ class WorldViewer(object):
             self.world_center = Vec(0, 0)
 
     def draw(self, _, c):
-        self.recalculate()
-
         c.set_source_rgba(*DARK_GRAY)
         c.paint()
 
-        if self.draw_subscriber: self.draw_subscriber.on_draw_background(c, self)
-
-        world = self.world
-
-        # cells
-        # reverse to show small over large cells
-        for cell in sorted(world.cells.values(), reverse=True):
-            pos = self.world_to_screen_pos(cell.pos)
-            draw_circle(c, pos, cell.size * self.screen_scale,
-                        color=to_rgba(cell.color, .8))
-            if cell.is_virus or cell.is_food or cell.is_ejected_mass:
-                pass  # do not draw name/size
-            elif cell.name:
-                draw_text_center(c, pos, '%s' % cell.name)
-
         if self.draw_subscriber:
+            self.recalculate()
+            self.draw_subscriber.on_draw_background(c, self)
             self.draw_subscriber.on_draw_cells(c, self)
             self.draw_subscriber.on_draw_hud(c, self)
