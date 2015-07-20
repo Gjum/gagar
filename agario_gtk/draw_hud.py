@@ -96,16 +96,10 @@ class MassGraph(Subscriber):
 
 
 class FpsMeter(Subscriber):
-    def __init__(self, queue_len, toggle_key):
+    def __init__(self, queue_len):
         self.draw_last = self.world_last = time()
         self.draw_times = deque([0]*queue_len, queue_len)
         self.world_times = deque([0]*queue_len, queue_len)
-        self.toggle_key = toggle_key
-        self.show = False
-
-    def on_key_pressed(self, val, char):
-        if val == self.toggle_key:
-            self.show = not self.show
 
     def on_world_update_post(self):
         now = time()
@@ -114,19 +108,18 @@ class FpsMeter(Subscriber):
         self.world_times.appendleft(dt)
 
     def on_draw_hud(self, c, w):
-        if self.show:
-            c.set_line_width(2)
-            c.set_source_rgba(*to_rgba(RED, .3))
-            for i, t in enumerate(self.draw_times):
-                c.move_to(*(w.win_size - Vec(4*i - 2, 0)))
-                c.rel_line_to(0, -t * 1000)
-                c.stroke()
+        c.set_line_width(2)
+        c.set_source_rgba(*to_rgba(RED, .3))
+        for i, t in enumerate(self.draw_times):
+            c.move_to(*(w.win_size - Vec(4*i - 2, 0)))
+            c.rel_line_to(0, -t * 1000)
+            c.stroke()
 
-            c.set_source_rgba(*to_rgba(YELLOW, .3))
-            for i, t in enumerate(self.world_times):
-                c.move_to(*(w.win_size - Vec(4*i, 0)))
-                c.rel_line_to(0, -t * 1000)
-                c.stroke()
+        c.set_source_rgba(*to_rgba(YELLOW, .3))
+        for i, t in enumerate(self.world_times):
+            c.move_to(*(w.win_size - Vec(4*i, 0)))
+            c.rel_line_to(0, -t * 1000)
+            c.stroke()
 
         now = time()
         dt = now - self.draw_last
