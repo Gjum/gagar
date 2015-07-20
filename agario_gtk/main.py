@@ -18,6 +18,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
+from collections import defaultdict
 
 import random
 import sys
@@ -173,6 +174,21 @@ def gtk_main_loop():
     Gtk.main()
 
 
+class KeyToggler(MultiSubscriber):
+    def __init__(self, key, *subs, disabled=False):
+        super(KeyToggler, self).__init__(*subs)
+        self.toggle_key = key
+        self.enabled = not disabled
+
+    def __getattr__(self, func_name):
+        if self.enabled and func_name[:3] == 'on_':
+            return super(KeyToggler, self).__getattr__(func_name)
+
+    def on_key_pressed(self, val, char):
+        if val == self.toggle_key:
+            self.enabled = not self.enabled
+
+
 class GtkControl(Subscriber):
     def __init__(self, address, token=None, nick=None):
         if nick is None: nick = random.choice(special_names)
@@ -180,30 +196,38 @@ class GtkControl(Subscriber):
         # connect the subscribers
         # order is important, first subscriber gets called first
 
-        multi_sub = MultiSubscriber(self)
+        self.multi_sub = MultiSubscriber(self)
+        def key(keycode, *subs, disabled=False):
+            # subscribe all these subscribers, toggle them when key is pressed
+            if isinstance(keycode, str): keycode = ord(keycode)
+            self.multi_sub.sub(KeyToggler(keycode, *subs, disabled=disabled))
 
-        self.client = client = Client(multi_sub)
+        self.client = client = Client(self.multi_sub)
 
-        multi_sub.sub(NativeControl(client))
-        multi_sub.sub(Logger(client))
+        self.multi_sub.sub(NativeControl(client))
 
         # background
-        multi_sub.sub(WorldBorderDrawer())
-        multi_sub.sub(GridDrawer())
+        key('b', WorldBorderDrawer())
+        key('g', GridDrawer())
 
-        multi_sub.sub(CellsDrawer())
+        self.multi_sub.sub(CellsDrawer())
 
         # cell overlay
-        multi_sub.sub(CellHostility())
-        multi_sub.sub(CellMasses())
-        multi_sub.sub(RemergeTimes(client.player))
-        multi_sub.sub(MovementLines())
+        key('i',
+            CellHostility(),
+            CellMasses(),
+            RemergeTimes(client.player),
+        )
+        key('m', MovementLines())
 
         # HUD
-        multi_sub.sub(Minimap())
-        multi_sub.sub(Leaderboard())
-        multi_sub.sub(MassGraph(client))
-        multi_sub.sub(FpsMeter(50, Gdk.KEY_F3))
+        key(Gdk.KEY_F1,
+            Minimap(),
+            Leaderboard(),
+            Logger(client),
+            MassGraph(client),
+        )
+        key(Gdk.KEY_F3, FpsMeter(50), disabled=True)
 
         client.player.nick = nick
         client.connect(address, token)
@@ -211,7 +235,7 @@ class GtkControl(Subscriber):
         gtk_watch_client(client)
 
         self.world_viewer = wv = WorldViewer(client.world)
-        wv.draw_subscriber = wv.input_subscriber = multi_sub
+        wv.draw_subscriber = wv.input_subscriber = self.multi_sub
         wv.focus_player(client.player)
 
     def on_world_update_post(self):
