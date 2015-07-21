@@ -123,9 +123,6 @@ class WorldViewer(object):
             self.world_center = Vec(0, 0)
 
     def draw(self, _, c):
-        c.set_source_rgba(*DARK_GRAY)
-        c.paint()
-
         if self.draw_subscriber:
             self.recalculate()
             self.draw_subscriber.on_draw_background(c, self)

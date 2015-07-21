@@ -2,6 +2,15 @@ from .drawutils import *
 from .subscriber import Subscriber
 
 
+class SolidBackground(Subscriber):
+    def __init__(self, color=DARK_GRAY):
+        self.color = color
+
+    def on_draw_background(self, c, w):
+        c.set_source_rgba(*self.color)
+        c.paint()
+
+
 class GridDrawer(Subscriber):
     def on_draw_background(self, c, w):
         wl, wt = w.world_to_screen_pos(w.world.top_left)

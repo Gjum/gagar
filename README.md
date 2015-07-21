@@ -36,6 +36,7 @@ Controls
 | `G`       | show/hide grid        |
 | `B`       | show/hide world border |
 | `F1`      | show/hide overlays    |
+| `F2`      | change background color |
 | `F3`      | show/hide FPS meter   |
 | `Q`/`ESC` | quit                  |
 
