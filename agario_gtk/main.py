@@ -18,8 +18,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
-from collections import defaultdict
-
 import random
 import sys
 
@@ -31,6 +29,7 @@ from .draw_hud import *
 from .draw_cells import *
 from .draw_background import *
 from .drawutils import *
+from .skins import CellSkins
 from .subscriber import MultiSubscriber, Subscriber
 from .window import WorldViewer
 
@@ -213,6 +212,7 @@ class GtkControl(Subscriber):
         self.multi_sub.sub(CellsDrawer())
 
         # cell overlay
+        key('k', CellSkins())
         key('n', CellNames())
         key('i',
             CellHostility(),
