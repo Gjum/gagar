@@ -213,6 +213,7 @@ class GtkControl(Subscriber):
         self.multi_sub.sub(CellsDrawer())
 
         # cell overlay
+        key('n', CellNames())
         key('i',
             CellHostility(),
             CellMasses(),

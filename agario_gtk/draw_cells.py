@@ -12,9 +12,13 @@ class CellsDrawer(Subscriber):
             pos = w.world_to_screen_pos(cell.pos)
             draw_circle(c, pos, cell.size * w.screen_scale,
                         color=to_rgba(cell.color, .8))
-            if cell.is_virus or cell.is_food or cell.is_ejected_mass:
-                pass  # do not draw name/size
-            elif cell.name:
+
+
+class CellNames(Subscriber):
+    def on_draw_cells(self, c, w):
+        for cell in w.world.cells.values():
+            if cell.name:
+                pos = w.world_to_screen_pos(cell.pos)
                 draw_text_center(c, pos, '%s' % cell.name)
 
 

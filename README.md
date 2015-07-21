@@ -30,6 +30,7 @@ Controls
 | `K`       | explode (disabled on official servers) |
 | `C`       | reconnect to any server |
 | `I`       | show/hide helpful cell info |
+| `N`       | show/hide names       |
 | `M`       | show/hide movement lines |
 | `G`       | show/hide grid        |
 | `B`       | show/hide world border |
