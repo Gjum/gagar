@@ -12,12 +12,15 @@ class SolidBackground(Subscriber):
 
 
 class GridDrawer(Subscriber):
+    def __init__(self, color=to_rgba(LIGHT_GRAY, .3)):
+        self.color = color
+
     def on_draw_background(self, c, w):
         wl, wt = w.world_to_screen_pos(w.world.top_left)
         wr, wb = w.world_to_screen_pos(w.world.bottom_right)
 
         # grid
-        c.set_source_rgba(*to_rgba(LIGHT_GRAY, .3))
+        c.set_source_rgba(*self.color)
         c.set_line_width(.5)
 
         for y in frange(wt, wb, 50 * w.screen_scale):
