@@ -199,7 +199,7 @@ class GtkControl(Subscriber):
         def key(keycode, *subs, disabled=False):
             # subscribe all these subscribers, toggle them when key is pressed
             if isinstance(keycode, str): keycode = ord(keycode)
-            return self.multi_sub.sub(KeyToggler(keycode, *subs, disabled=disabled))
+            self.multi_sub.sub(KeyToggler(keycode, *subs, disabled=disabled))
 
         self.client = client = Client(self.multi_sub)
 
@@ -209,10 +209,7 @@ class GtkControl(Subscriber):
         key(Gdk.KEY_F2, SolidBackground())
         key(Gdk.KEY_F2, SolidBackground(WHITE), disabled=True)
         key('b', WorldBorderDrawer())
-        key('g',
-            key(Gdk.KEY_F2, GridDrawer()),
-            key(Gdk.KEY_F2, GridDrawer(LIGHT_GRAY), disabled=True),
-        )
+        key('g', GridDrawer())
 
         self.multi_sub.sub(CellsDrawer())
 
