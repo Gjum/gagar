@@ -66,6 +66,9 @@ class BufferStruct(object):
         self.buffer = self.buffer[size:]
         return values
 
+    def pop_int8(self):
+        return self.pop_values('<b')[0]
+
     def pop_uint8(self):
         return self.pop_values('<B')[0]
 

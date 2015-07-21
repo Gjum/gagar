@@ -1,2 +1,2 @@
 __author__ = 'Gjum'
-__all__ = ['buffer', 'client', 'vec', 'world']
+__all__ = ['buffer', 'client', 'utils', 'vec', 'world']
