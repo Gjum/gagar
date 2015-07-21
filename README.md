@@ -22,13 +22,19 @@ Controls
 --------
 | Key       | Action                |
 |:----------|:----------------------|
+| `S`       | spectate              |
 | `R`       | respawn               |
 | `Mouse`   | movement direction    |
 | `W`       | shoot small cell      |
 | `Space`   | split                 |
 | `K`       | explode (disabled on official servers) |
 | `C`       | reconnect to any server |
-| `H`       | show/hide helpful cell info |
+| `I`       | show/hide helpful cell info |
+| `N`       | show/hide names       |
+| `M`       | show/hide movement lines |
+| `G`       | show/hide grid        |
+| `B`       | show/hide world border |
+| `F1`      | show/hide overlays    |
 | `F3`      | show/hide FPS meter   |
 | `Q`/`ESC` | quit                  |
 

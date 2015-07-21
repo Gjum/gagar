@@ -254,14 +254,13 @@ class Client(object):
 
     def parse_own_id(self, buf):  # new cell ID, respawned or split
         cid = buf.pop_uint32()
-        player = self.player
-        if not player.is_alive:  # respawned
-            player.own_ids.clear()
+        if not self.player.is_alive:  # respawned
+            self.player.own_ids.clear()
             self.subscriber.on_respawn()
         # server sends empty name, assumes we set it here
-        self.player.world.cells[cid].name = player.nick
-        player.own_ids.add(cid)
-        player.cells_changed()
+        self.player.world.cells[cid].name = self.player.nick
+        self.player.own_ids.add(cid)
+        self.player.cells_changed()
         self.subscriber.on_own_id(cid=cid)
 
     def parse_world_rect(self, buf):  # world size

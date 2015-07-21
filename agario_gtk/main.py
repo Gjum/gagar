@@ -18,37 +18,33 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
 """
+from collections import defaultdict
 
-from collections import deque
 import random
-from time import time
 import sys
 
 from gi.repository import Gtk, GLib, Gdk
 
 from agario.client import Client
 from agario.utils import special_names, get_party_address, find_server
-from agario.vec import Vec
+from .draw_hud import *
+from .draw_cells import *
+from .draw_background import *
 from .drawutils import *
 from .subscriber import MultiSubscriber, Subscriber
 from .window import WorldViewer
 
 
 class NativeControl(Subscriber):
-    def __init__(self, client, key_movement_lines=ord('l')):
+    def __init__(self, client):
         self.client = client
         self.movement_delta = Vec()
-        self.show_movement_lines = True
-        self.key_movement_lines = key_movement_lines
-
-    @property
-    def mouse_world(self):
-        return self.client.player.center + self.movement_delta
 
     def send_mouse(self):
-        self.client.send_target(*self.mouse_world)
+        self.client.send_target(*self.client.player.center + self.movement_delta)
 
     def on_world_update_post(self):
+        # keep cells moving even when mouse stands still
         self.send_mouse()
 
     def on_mouse_moved(self, pos, pos_world):
@@ -64,101 +60,6 @@ class NativeControl(Subscriber):
             self.client.send_split()
         elif char == 'k':
             self.client.send_explode()
-        elif val == self.key_movement_lines:
-            self.show_movement_lines = not self.show_movement_lines
-
-    def on_draw_cells(self, c, w):
-        if self.show_movement_lines:
-            mouse_pos = w.world_to_screen_pos(self.mouse_world)
-            c.set_source_rgba(*to_rgba(BLACK, .3))
-            for cell in self.client.player.own_cells:
-                c.move_to(*w.world_to_screen_pos(cell.pos))
-                c.line_to(*mouse_pos)
-                c.stroke()
-
-
-class CellInfo(Subscriber):
-    def __init__(self, client):
-        self.client = client
-        self.show_cell_masses = False
-        self.show_remerge_times = False
-        self.show_hostility = False
-        self.cell_masses_key = ord('h')
-        self.remerge_times_key = ord('h')
-        self.hostility_key = ord('h')
-
-    def on_key_pressed(self, val, char):
-        if val == self.cell_masses_key:
-            self.show_cell_masses = not self.show_cell_masses
-        if val == self.remerge_times_key:
-            self.show_remerge_times = not self.show_remerge_times
-        if val == self.hostility_key:
-            self.show_hostility = not self.show_hostility
-
-    def on_own_id(self, cid):
-        self.client.player.world.cells[cid].split_time = time()
-
-    def on_draw_cells(self, c, w):
-        p = self.client.player
-        if self.show_cell_masses:
-            self.draw_cell_masses(c, w, p)
-        if self.show_remerge_times:
-            self.draw_remerge_times(c, w, p)
-        if self.show_hostility:
-            self.draw_hostility(c, w, p)
-
-    def draw_cell_masses(self, c, w, p):
-        for cell in p.world.cells.values():
-            if cell.is_food or cell.is_ejected_mass:
-                continue
-            pos = w.world_to_screen_pos(cell.pos)
-            if cell.name:
-                pos.iadd(Vec(0, 12))
-            text = '%i mass' % cell.mass
-            draw_text_center(c, pos, text)
-
-    def draw_remerge_times(self, c, w, p):
-        if len(p.own_ids) <= 1:
-            return  # dead or only one cell, no remerge time to display
-        now = time()
-        for cell in p.own_cells:
-            split_for = now - cell.split_time
-            # formula by DebugMonkey
-            ttr = (p.total_mass * 20 + 30000) / 1000 - split_for
-            if ttr < 0: continue
-            pos = w.world_to_screen_pos(cell.pos)
-            text = 'TTR %.1fs after %.1fs' % (ttr, split_for)
-            draw_text_center(c, Vec(0, -12).iadd(pos), text)
-
-    def draw_hostility(self, c, w, p):
-        if not p.is_alive: return  # nothing to be hostile against
-        own_min_mass = min(c.mass for c in p.own_cells)
-        own_max_mass = max(c.mass for c in p.own_cells)
-        lw = c.get_line_width()
-        c.set_line_width(5)
-        for cell in p.world.cells.values():
-            if cell.is_food or cell.is_ejected_mass:
-                continue  # no threat
-            if cell.cid in p.own_ids:
-                continue  # own cell, also no threat lol
-            pos = w.world_to_screen_pos(cell.pos)
-            color = YELLOW
-            if cell.is_virus:
-                if own_max_mass > cell.mass:
-                    color = RED
-                else:
-                    continue  # no threat, do not mark
-            elif own_min_mass > cell.mass * 1.25 * 2:
-                color = PURPLE
-            elif own_min_mass > cell.mass * 1.25:
-                color = GREEN
-            elif cell.mass > own_min_mass * 1.25 * 2:
-                color = RED
-            elif cell.mass > own_min_mass * 1.25:
-                color = ORANGE
-            c.set_source_rgba(*color)
-            draw_circle_outline(c, pos, cell.size * w.screen_scale)
-        c.set_line_width(lw)
 
 
 def format_log(lines, width, indent='  '):
@@ -258,75 +159,6 @@ class Logger(Subscriber):
                            text, size=10, face='monospace')
 
 
-class MassGraph(Subscriber):
-    def __init__(self, client):
-        self.client = client
-        self.graph = []
-
-    def on_respawn(self):
-        self.graph.clear()
-
-    def on_world_update_post(self):
-        player = self.client.player
-        if not player.is_alive:
-            return
-        sample = (
-            player.total_mass,
-            sorted((c.cid, c.mass) for c in player.own_cells)
-        )
-        self.graph.append(sample)
-
-    def on_draw_hud(self, c, w):
-        if not self.graph:
-            return
-        scale_x = w.INFO_SIZE / len(self.graph)
-        scale_y = w.INFO_SIZE / (max(self.graph)[0] or 10)
-        c.set_source_rgba(*to_rgba(BLUE, .3))
-        c.move_to(0, 0)
-        for i, (total_mass, masses) in enumerate(reversed(self.graph)):
-            c.line_to(i * scale_x, total_mass * scale_y)
-        c.line_to(w.INFO_SIZE, 0)
-        c.fill()
-
-
-class FpsMeter(Subscriber):
-    def __init__(self, queue_len, toggle_key=Gdk.KEY_F3):
-        self.draw_last = self.world_last = time()
-        self.draw_times = deque([0]*queue_len, queue_len)
-        self.world_times = deque([0]*queue_len, queue_len)
-        self.toggle_key = toggle_key
-        self.show = False
-
-    def on_key_pressed(self, val, char):
-        if val == self.toggle_key:
-            self.show = not self.show
-
-    def on_world_update_post(self):
-        now = time()
-        dt = now - self.world_last
-        self.world_last = now
-        self.world_times.appendleft(dt)
-
-    def on_draw_hud(self, c, w):
-        if self.show:
-            c.set_source_rgba(*to_rgba(RED, .3))
-            for i, t in enumerate(self.draw_times):
-                c.move_to(*(w.win_size - Vec(4*i - 2, 0)))
-                c.rel_line_to(0, -t * 1000)
-                c.stroke()
-
-            c.set_source_rgba(*to_rgba(YELLOW, .3))
-            for i, t in enumerate(self.world_times):
-                c.move_to(*(w.win_size - Vec(4*i, 0)))
-                c.rel_line_to(0, -t * 1000)
-                c.stroke()
-
-        now = time()
-        dt = now - self.draw_last
-        self.draw_last = now
-        self.draw_times.appendleft(dt)
-
-
 def gtk_watch_client(client):
     # watch clinet's websocket in GTK main loop
     # `or True` is for always returning True to keep watching
@@ -342,20 +174,61 @@ def gtk_main_loop():
     Gtk.main()
 
 
+class KeyToggler(MultiSubscriber):
+    def __init__(self, key, *subs, disabled=False):
+        super(KeyToggler, self).__init__(*subs)
+        self.toggle_key = key
+        self.enabled = not disabled
+
+    def __getattr__(self, func_name):
+        if self.enabled and func_name[:3] == 'on_':
+            return super(KeyToggler, self).__getattr__(func_name)
+
+    def on_key_pressed(self, val, char):
+        if val == self.toggle_key:
+            self.enabled = not self.enabled
+
+
 class GtkControl(Subscriber):
     def __init__(self, address, token=None, nick=None):
         if nick is None: nick = random.choice(special_names)
 
-        multi_sub = MultiSubscriber(self)
+        # connect the subscribers
+        # order is important, first subscriber gets called first
 
-        self.client = client = Client(multi_sub)
+        self.multi_sub = MultiSubscriber(self)
+        def key(keycode, *subs, disabled=False):
+            # subscribe all these subscribers, toggle them when key is pressed
+            if isinstance(keycode, str): keycode = ord(keycode)
+            self.multi_sub.sub(KeyToggler(keycode, *subs, disabled=disabled))
 
-        multi_sub.sub(NativeControl(client))
-        multi_sub.sub(CellInfo(client))
+        self.client = client = Client(self.multi_sub)
 
-        multi_sub.sub(Logger(client))
-        multi_sub.sub(MassGraph(client))
-        multi_sub.sub(FpsMeter(50))
+        self.multi_sub.sub(NativeControl(client))
+
+        # background
+        key('b', WorldBorderDrawer())
+        key('g', GridDrawer())
+
+        self.multi_sub.sub(CellsDrawer())
+
+        # cell overlay
+        key('n', CellNames())
+        key('i',
+            CellHostility(),
+            CellMasses(),
+            RemergeTimes(client.player),
+        )
+        key('m', MovementLines())
+
+        # HUD
+        key(Gdk.KEY_F1,
+            Minimap(),
+            Leaderboard(),
+            Logger(client),
+            MassGraph(client),
+        )
+        key(Gdk.KEY_F3, FpsMeter(50), disabled=True)
 
         client.player.nick = nick
         client.connect(address, token)
@@ -363,8 +236,8 @@ class GtkControl(Subscriber):
         gtk_watch_client(client)
 
         self.world_viewer = wv = WorldViewer(client.world)
-        wv.draw_subscriber = wv.input_subscriber = multi_sub
-        wv.focus_client(client)
+        wv.draw_subscriber = wv.input_subscriber = self.multi_sub
+        wv.focus_player(client.player)
 
     def on_world_update_post(self):
         self.world_viewer.drawing_area.queue_draw()
@@ -381,6 +254,7 @@ class GtkControl(Subscriber):
             self.client.disconnect()
             address, token, *_ = find_server()
             self.client.connect(address, token)
+            self.world_viewer.focus_player(self.client.player)
 
 
 def main():

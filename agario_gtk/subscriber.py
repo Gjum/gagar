@@ -43,7 +43,7 @@ class MultiSubscriber(Subscriber):
 
     def __getattr__(self, func_name):
         # still throw error when not getting an on_*() method/attribute
-        super(self.__class__, self).__getattr__(func_name)
+        super(MultiSubscriber, self).__getattr__(func_name)
 
         def wrapper(*args, **kwargs):
             for sub in self.subs:
