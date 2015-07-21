@@ -29,6 +29,7 @@ from agario.utils import special_names
 from .drawutils import TWOPI
 from .subscriber import Subscriber
 
+
 # TODO support agariomods etc. skins
 
 skin_cache = {}
@@ -52,14 +53,20 @@ def get_skin(name):
     return skin_cache[name]
 
 
+skin_surface_cache = {}
+
+
 class CellSkins(Subscriber):
     def on_draw_cells(self, c, w):
         for cell in w.world.cells.values():
-            if cell.name.lower() in special_names:
-                skin_data = get_skin(cell.name)
+            name = cell.name.lower()
+            if name in special_names:
+                skin_data = get_skin(name)
                 if not skin_data:  # image is still being loaded
                     continue  # TODO fancy loading circle animation
-                skin_surface = cairo.ImageSurface.create_from_png(io.BytesIO(skin_data))
+                if name not in skin_surface_cache:
+                    skin_surface_cache[name] = cairo.ImageSurface.create_from_png(io.BytesIO(skin_data))
+                skin_surface = skin_surface_cache[name]
                 skin_radius = skin_surface.get_width() / 2
                 c.save()
                 c.translate(*w.world_to_screen_pos(cell.pos))
