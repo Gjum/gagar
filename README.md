@@ -23,7 +23,7 @@ Controls
 | Key       | Action                |
 |:----------|:----------------------|
 | `S`       | spectate              |
-| `R`       | respawn               |
+| `R`/`RETURN` | respawn            |
 | `Mouse`   | movement direction    |
 | `W`       | shoot small cell      |
 | `Space`   | split                 |

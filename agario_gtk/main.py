@@ -250,7 +250,7 @@ class GtkControl(Subscriber):
             Gtk.main_quit()
         elif char == 's':
             self.client.send_spectate()
-        elif char == 'r':
+        elif char == 'r' or val == Gdk.KEY_Return:
             self.client.send_respawn()
         elif char == 'c':  # reconnect to any server
             self.client.disconnect()
