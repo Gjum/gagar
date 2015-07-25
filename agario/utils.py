@@ -54,23 +54,23 @@ def get_party_address(party_token):
         raise ValueError('Invalid token "%s" (maybe timed out after 10min?)' % party_token)
 
 
-def gcommer(server=None):
+def gcommer(address=None):
     """
     Try to get a token for this server address.
-    `server` has to be ip:port, e.g. `'1.2.3.4:1234'`
-    Returns tuple(server, token)
+    `address` has to be ip:port, e.g. `'1.2.3.4:1234'`
+    Returns tuple(address, token)
     """
-    if not server:
-        # no server specified, just get any server
+    if not address:
+        # get token for any world
         # this is only useful for testing, as m.agar.io can also be used for this
         url = 'http://at.gcommer.com/status'
         text = urllib.request.urlopen(url).read().decode()
         j = json.loads(text)
-        for server, num in j['status'].items():
+        for address, num in j['status'].items():
             if num > 0:
-                break  # server is now one of the listed servers with tokens
-    url = 'http://at.gcommer.com/claim?server=%s' % server
+                break  # address is now one of the listed servers with tokens
+    url = 'http://at.gcommer.com/claim?server=%s' % address
     text = urllib.request.urlopen(url).read().decode()
     j = json.loads(text)
     token = j['token']
-    return server, token
+    return address, token
