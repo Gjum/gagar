@@ -121,6 +121,15 @@ class FpsMeter(Subscriber):
             c.rel_line_to(0, -t * 1000)
             c.stroke()
 
+        # 25, 30, 60 FPS marks
+        c.set_line_width(.5)
+        graph_width = 4 * len(self.draw_times)
+        for fps, color in ((25,ORANGE), (30,GREEN), (60,BLUE)):
+            c.set_source_rgba(*to_rgba(color, .3))
+            c.move_to(*(w.win_size - Vec(graph_width, 1000/fps)))
+            c.rel_line_to(graph_width, 0)
+            c.stroke()
+
         now = time()
         dt = now - self.draw_last
         self.draw_last = now
