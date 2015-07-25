@@ -52,12 +52,6 @@ packet_c2s = {
 ingame_packets = ('world_rect', 'world_update', 'leaderboard_names',
                   'leaderboard_groups', 'spectate_update', 'own_id')
 
-moz_headers = [
-    ('User-Agent', 'Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0'),
-    ('Origin', 'http://agar.io'),
-    ('Referer', 'http://agar.io'),
-]
-
 
 handshake_version = 154669603
 
@@ -103,8 +97,8 @@ class Client(object):
         self.address, self.token = address, token
         self.ingame = False
 
-        self.ws.connect('ws://%s' % self.address, timeout=1, origin='http://agar.io',
-                        header=[': '.join(h) for h in moz_headers])
+        self.ws.settimeout(1)
+        self.ws.connect('ws://%s' % self.address, origin='http://agar.io')
         if not self.is_connected:
             self.subscriber.on_log_msg('Failed to connect to "%s"' % self.address)
             return False

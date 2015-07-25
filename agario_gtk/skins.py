@@ -24,8 +24,7 @@ import urllib.request
 
 import cairo
 
-from agario.client import moz_headers
-from agario.utils import special_names
+from agario.utils import moz_headers, special_names
 from .drawutils import TWOPI
 from .subscriber import Subscriber
 
