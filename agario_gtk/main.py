@@ -40,7 +40,9 @@ class NativeControl(Subscriber):
         self.movement_delta = Vec()
 
     def send_mouse(self):
-        self.client.send_target(*self.client.player.center + self.movement_delta)
+        if self.client.player.is_alive:
+            target = self.client.player.center + self.movement_delta
+            self.client.send_target(*target)
 
     def on_world_update_post(self):
         # keep cells moving even when mouse stands still
