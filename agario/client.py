@@ -203,12 +203,12 @@ class Client(object):
             bitmask = buf.pop_uint8()
             is_virus = bool(bitmask & 1)
             is_agitated = bool(bitmask & 16)
-            skips = 0  # lolwtf
-            if bitmask & 2: skips += 4
-            if bitmask & 4: skips += 8
-            if bitmask & 8: skips += 16
-            for i in range(skips): buf.pop_uint8()
-            cname = buf.pop_str()
+            if bitmask & 2:  # skip weird padding
+                for i in range(buf.pop_uint32()):
+                    buf.pop_uint8()
+            if bitmask & 4:  # TODO skin URL?
+                pass  # skin_url = buf.pop_str8()
+            cname = buf.pop_str16()
             self.subscriber.on_cell_info(cid=cid, x=cx, y=cy,
                                          size=csize, name=cname, color=color,
                                          is_virus=is_virus, is_agitated=is_agitated)
@@ -236,7 +236,7 @@ class Client(object):
         leaderboard_names = []
         for i in range(n):
             l_id = buf.pop_uint32()
-            l_name = buf.pop_str()
+            l_name = buf.pop_str16()
             leaderboard_names.append((l_id, l_name))
         self.subscriber.on_leaderboard_names(leaderboard=leaderboard_names)
         self.player.world.leaderboard_names = leaderboard_names
