@@ -300,6 +300,9 @@ class Client(object):
     def send_token(self, token):
         self.send_struct('<B%iB' % len(token), 80, *map(ord, token))
 
+    def send_facebook(self, token):
+        self.send_struct('<B%iB' % len(token), 81, *map(ord, token))
+
     def send_respawn(self):
         nick = self.player.nick
         self.send_struct('<B%iH' % len(nick), 0, *map(ord, nick))

@@ -253,6 +253,8 @@ class GtkControl(Subscriber):
         elif char == 's':
             self.client.send_spectate()
         elif char == 'r' or val == Gdk.KEY_Return:
+            fb_token = 'YOUR_TOKEN_HERE'
+            self.client.send_facebook(fb_token)
             self.client.send_respawn()
         elif char == 'c':  # reconnect to any server
             self.client.disconnect()
