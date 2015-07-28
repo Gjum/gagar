@@ -55,34 +55,46 @@ def as_rect(tl, br=None, size=None):
     else:
         return tl.x, tl.y, br.x-tl.x, br.y-tl.y
 
-def draw_text_center(c, center, text, *args, **kwargs):
-    try:
-        x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
-            = c.text_extents(text)
-        cx, cy = center
-        x = cx - x_bearing - text_width / 2
-        y = cy - y_bearing - text_height / 2
-        draw_text_left(c, (x, y), text, *args, **kwargs)
-    except UnicodeEncodeError:
-        pass
-
-def draw_text_left(c, pos, text,
-                   color=WHITE, shadow=None, size=12, face='sans'):
+def draw_text(c, pos, text, center=False, color=WHITE, shadow=None, outline=None, size=12, face='sans'):
     try:
         c.select_font_face(face)
         c.set_font_size(size)
-        x, y = pos
+
+        if center:
+            x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
+                = c.text_extents(text)
+            x = pos[0] - x_bearing - text_width // 2
+            y = pos[1] - y_bearing - text_height // 2
+        else:
+            x, y = pos
+
         if shadow:
             s_color, s_offset = shadow
             s_dx, s_dy = s_offset
             c.move_to(x + s_dx, y + s_dy)
             c.set_source_rgba(*s_color)
             c.show_text(text)
+
+        if outline:
+            o_color, o_size = outline
+            c.move_to(x, y)
+            c.set_line_width(o_size)
+            c.set_source_rgba(*o_color)
+            c.text_path(text)
+            c.stroke()
+
         c.move_to(x, y)
         c.set_source_rgba(*color)
-        c.show_text(text)
+        c.text_path(text)
+        c.fill()
     except UnicodeEncodeError:
         pass
+
+def draw_text_center(c, center, text, *args, **kwargs):
+    draw_text(c, center, text, center=True, *args, **kwargs)
+
+def draw_text_left(c, pos, text, *args, **kwargs):
+    draw_text(c, pos, text, center=False, *args, **kwargs)
 
 def draw_circle(c, pos, radius, color=None):
     x, y = pos
