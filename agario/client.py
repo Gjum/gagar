@@ -35,6 +35,7 @@ packet_s2c = {
     49: 'leaderboard_names',
     50: 'leaderboard_groups',
     64: 'world_rect',
+    81: 'experience_info',
 }
 
 packet_c2s = {
@@ -275,6 +276,13 @@ class Client(object):
         self.player.center.set(x, y)
         self.player.scale = scale
         self.subscriber.on_spectate_update(pos=self.player.center, scale=scale)
+
+    def parse_experience_info(self, buf):
+        level = buf.pop_uint32()
+        current_xp = buf.pop_uint32()
+        next_xp = buf.pop_uint32()
+        print(*('%s: %s' % l for l in locals().items()))
+        self.subscriber.on_experience_info(level=level, current_xp=current_xp, next_xp=next_xp)
 
     def parse_clear_cells(self, buf):
         # TODO clear cells packet is untested
