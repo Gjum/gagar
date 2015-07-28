@@ -41,27 +41,30 @@ class Minimap(Subscriber):
 
 class Leaderboard(Subscriber):
     def on_draw_hud(self, c, w):
-        lb_x = w.win_size.x - w.INFO_SIZE
+        width = 200
+        lb_x = w.win_size.x - width-10
 
         c.set_source_rgba(*to_rgba(BLACK, .6))
-        c.rectangle(lb_x, 0,
-                    w.INFO_SIZE, 21 * len(w.world.leaderboard_names))
+        c.rectangle(lb_x, 10,
+                    width, 50 + 24 * len(w.world.leaderboard_names))
         c.fill()
 
         player_cid = min(c.cid for c in w.player.own_cells) \
             if w.player and w.player.own_ids else -1
 
+        draw_text_center(c, (lb_x+width//2, 35), "Leaderboard", color=WHITE, size=30)
+
         for rank, (cid, name) in enumerate(w.world.leaderboard_names):
             rank += 1  # start at rank 1
             name = name or 'An unnamed cell'
-            text = '%i. %s (%s)' % (rank, name, cid)
+            text = '%i. %s' % (rank, name)
             if cid == player_cid:
                 color = RED
             elif cid in w.world.cells:
                 color = LIGHT_BLUE
             else:
                 color = WHITE
-            draw_text_left(c, (lb_x+10, 20*rank), text, color=color)
+            draw_text_left(c, (lb_x+10, 50+24*rank), text, color=color, size=20)
 
 
 class MassGraph(Subscriber):
