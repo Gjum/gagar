@@ -104,6 +104,9 @@ class WorldViewer(object):
         return (screen_pos - self.screen_center) \
             .idiv(self.screen_scale).iadd(self.world_center)
 
+    def world_to_screen_size(self, world_size):
+        return world_size * self.screen_scale
+
     def recalculate(self):
         alloc = self.drawing_area.get_allocation()
         self.win_size.set(alloc.width, alloc.height)

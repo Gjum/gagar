@@ -19,7 +19,8 @@ class CellNames(Subscriber):
         for cell in w.world.cells.values():
             if cell.name:
                 pos = w.world_to_screen_pos(cell.pos)
-                draw_text_center(c, pos, '%s' % cell.name)
+                size = w.world_to_screen_size(max(0.3*cell.size, 24))
+                draw_text_center(c, pos, '%s' % cell.name, size=size, outline=(BLACK, 2))
 
 
 class RemergeTimes(Subscriber):
@@ -51,9 +52,9 @@ class CellMasses(Subscriber):
                 continue
             pos = w.world_to_screen_pos(cell.pos)
             if cell.name:
-                pos.iadd(Vec(0, 12))
-            text = '%i mass' % cell.mass
-            draw_text_center(c, pos, text)
+                nameSize = w.world_to_screen_size(max(0.3*cell.size, 24))
+                pos.iadd(Vec(0, nameSize//2+2))
+            draw_text_center(c, pos, '%i' % cell.mass, outline=(BLACK, 2), size=15)
 
 
 class CellHostility(Subscriber):
