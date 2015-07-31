@@ -20,7 +20,8 @@ class CellNames(Subscriber):
             if cell.name:
                 pos = w.world_to_screen_pos(cell.pos)
                 size = w.world_to_screen_size(max(0.3*cell.size, 24))
-                draw_text_center(c, pos, '%s' % cell.name, size=size, outline=(BLACK, 2))
+                draw_text(c, pos, '%s' % cell.name,
+                          align='center', outline=(BLACK, 2), size=size)
 
 
 class RemergeTimes(Subscriber):
@@ -42,7 +43,7 @@ class RemergeTimes(Subscriber):
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
             text = 'TTR %.1fs after %.1fs' % (ttr, split_for)
-            draw_text_center(c, Vec(0, -12).iadd(pos), text)
+            draw_text(c, Vec(0, -12).iadd(pos), text, align='center')
 
 
 class CellMasses(Subscriber):
@@ -54,7 +55,8 @@ class CellMasses(Subscriber):
             if cell.name:
                 nameSize = w.world_to_screen_size(max(0.3*cell.size, 24))
                 pos.iadd(Vec(0, nameSize//2+2))
-            draw_text_center(c, pos, '%i' % cell.mass, outline=(BLACK, 2), size=15)
+            draw_text(c, pos, '%i' % cell.mass,
+                      align='center', outline=(BLACK, 2), size=15)
 
 
 class CellHostility(Subscriber):

@@ -52,7 +52,8 @@ class Leaderboard(Subscriber):
         player_cid = min(c.cid for c in w.player.own_cells) \
             if w.player and w.player.own_ids else -1
 
-        draw_text_center(c, (lb_x+width//2, 35), "Leaderboard", color=WHITE, size=30)
+        draw_text(c, (lb_x+width//2, 35), "Leaderboard",
+                  align='center', color=WHITE, size=30)
 
         for rank, (cid, name) in enumerate(w.world.leaderboard_names):
             rank += 1  # start at rank 1
@@ -64,7 +65,8 @@ class Leaderboard(Subscriber):
                 color = LIGHT_BLUE
             else:
                 color = WHITE
-            draw_text_left(c, (lb_x+10, 50+24*rank), text, color=color, size=20)
+            draw_text(c, (lb_x+10, 50+24*rank), text,
+                      align='left', color=color, size=20)
 
 
 class MassGraph(Subscriber):

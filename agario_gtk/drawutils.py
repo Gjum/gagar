@@ -55,18 +55,26 @@ def as_rect(tl, br=None, size=None):
     else:
         return tl.x, tl.y, br.x-tl.x, br.y-tl.y
 
-def draw_text(c, pos, text, center=False, color=WHITE, shadow=None, outline=None, size=12, face='sans'):
+def draw_text(c, pos, text, align='left', color=WHITE, shadow=None, outline=None, size=12, face='sans'):
     try:
         c.select_font_face(face)
         c.set_font_size(size)
 
-        if center:
+        align = align.lower()
+        if align == 'center':
             x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
                 = c.text_extents(text)
             x = pos[0] - x_bearing - text_width // 2
             y = pos[1] - y_bearing - text_height // 2
-        else:
+        elif align == 'left':
             x, y = pos
+        elif align == 'right':
+            x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
+                = c.text_extents(text)
+            x = pos[0] - x_bearing - text_width
+            y = pos[1]
+        else:
+            raise ValueError('Invalid alignment "%s"' % align)
 
         if shadow:
             s_color, s_offset = shadow
@@ -89,12 +97,6 @@ def draw_text(c, pos, text, center=False, color=WHITE, shadow=None, outline=None
         c.fill()
     except UnicodeEncodeError:
         pass
-
-def draw_text_center(c, center, text, *args, **kwargs):
-    draw_text(c, center, text, center=True, *args, **kwargs)
-
-def draw_text_left(c, pos, text, *args, **kwargs):
-    draw_text(c, pos, text, center=False, *args, **kwargs)
 
 def draw_circle(c, pos, radius, color=None):
     x, y = pos
