@@ -4,6 +4,12 @@ from agario.vec import Vec
 from .subscriber import Subscriber
 from .drawutils import *
 
+info_size = 14
+
+
+def nick_size(cell, w):
+    return max(14, w.world_to_screen_size(.3 * cell.size))
+
 
 class CellsDrawer(Subscriber):
     def on_draw_cells(self, c, w):
@@ -19,31 +25,33 @@ class CellNames(Subscriber):
         for cell in w.world.cells.values():
             if cell.name:
                 pos = w.world_to_screen_pos(cell.pos)
-                size = w.world_to_screen_size(max(0.3*cell.size, 24))
+                size = nick_size(cell, w)
                 draw_text(c, pos, '%s' % cell.name,
                           align='center', outline=(BLACK, 2), size=size)
 
 
 class RemergeTimes(Subscriber):
-    def __init__(self, player):
-        self.player = player
+    def __init__(self, client):
+        self.client = client
         self.split_times = {}
 
     def on_own_id(self, cid):
         self.split_times[cid] = time()
 
     def on_draw_cells(self, c, w):
-        if len(self.player.own_ids) <= 1:
+        player = self.client.player
+        if len(player.own_ids) <= 1:
             return  # dead or only one cell, no remerge time to display
         now = time()
-        for cell in self.player.own_cells:
+        for cell in player.own_cells:
             split_for = now - self.split_times[cell.cid]
             # formula by DebugMonkey
-            ttr = (self.player.total_mass * 20 + 30000) / 1000 - split_for
+            ttr = (player.total_mass * 20 + 30000) / 1000 - split_for
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
-            text = 'TTR %.1fs after %.1fs' % (ttr, split_for)
-            draw_text(c, Vec(0, -12).iadd(pos), text, align='center')
+            pos.isub(Vec(0, (info_size + nick_size(cell, w)) / 2))
+            draw_text(c, pos, 'TTR %.1fs after %.1fs' % (ttr, split_for),
+                      align='center', outline=(BLACK, 2), size=info_size)
 
 
 class CellMasses(Subscriber):
@@ -53,10 +61,9 @@ class CellMasses(Subscriber):
                 continue
             pos = w.world_to_screen_pos(cell.pos)
             if cell.name:
-                nameSize = w.world_to_screen_size(max(0.3*cell.size, 24))
-                pos.iadd(Vec(0, nameSize//2+2))
+                pos.iadd(Vec(0, (info_size + nick_size(cell, w)) / 2))
             draw_text(c, pos, '%i' % cell.mass,
-                      align='center', outline=(BLACK, 2), size=15)
+                      align='center', outline=(BLACK, 2), size=info_size)
 
 
 class CellHostility(Subscriber):

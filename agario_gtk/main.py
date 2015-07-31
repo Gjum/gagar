@@ -221,7 +221,7 @@ class GtkControl(Subscriber):
         key('i',
             CellHostility(),
             CellMasses(),
-            RemergeTimes(client.player),
+            RemergeTimes(client),
         )
         key('m', MovementLines())
 
