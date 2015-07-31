@@ -14,25 +14,26 @@ class Minimap(Subscriber):
             minimap_scale = minimap_size.x / w.world.size.x
             minimap_offset = w.win_size - minimap_size
 
-            def world_to_mm(world_pos):
+            def world_to_map(world_pos):
                 pos_from_top_left = world_pos - w.world.top_left
                 return minimap_offset + pos_from_top_left * minimap_scale
 
             line_width = c.get_line_width()
             c.set_line_width(1)
 
-            # minimap border
-            c.set_source_rgba(*to_rgba(LIGHT_GRAY, .5))
+            # minimap background
+            c.set_source_rgba(*to_rgba(DARK_GRAY, .8))
             c.rectangle(*as_rect(minimap_offset, size=minimap_size))
-            c.stroke()
+            c.fill()
 
-            # the area visible in window
-            c.rectangle(*as_rect(world_to_mm(w.screen_to_world_pos(Vec(0,0))),
-                                 world_to_mm(w.screen_to_world_pos(w.win_size))))
+            # outline the area visible in window
+            c.set_source_rgba(*BLACK)
+            c.rectangle(*as_rect(world_to_map(w.screen_to_world_pos(Vec(0,0))),
+                                 world_to_map(w.screen_to_world_pos(w.win_size))))
             c.stroke()
 
             for cell in w.world.cells.values():
-                draw_circle_outline(c, world_to_mm(cell.pos),
+                draw_circle_outline(c, world_to_map(cell.pos),
                                     cell.size * minimap_scale,
                                     color=to_rgba(cell.color, .8))
 
