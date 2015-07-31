@@ -64,8 +64,8 @@ def draw_text(c, pos, text, align='left', color=WHITE, shadow=None, outline=None
         if align == 'center':
             x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
                 = c.text_extents(text)
-            x = pos[0] - x_bearing - text_width // 2
-            y = pos[1] - y_bearing - text_height // 2
+            x = pos[0] - x_bearing - text_width / 2
+            y = pos[1] - y_bearing - text_height / 2
         elif align == 'left':
             x, y = pos
         elif align == 'right':
