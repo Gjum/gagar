@@ -5,6 +5,10 @@ gagar
 
 Standalone graphical [agar.io](http://agar.io/) Python client using GTK
 
+![Screenshot of gagar](http://lunarco.de/gagar/img/2015-08-01-151935_1000x562_scrot.png)
+
+Installation
+------------
 Requires `pip install websocket-client` module for the headless client
 and GTK for the optional GUI.
 
