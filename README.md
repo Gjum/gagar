@@ -7,6 +7,24 @@ Standalone graphical [agar.io](http://agar.io/) Python client using GTK
 
 ![Screenshot of gagar](http://lunarco.de/gagar/img/2015-08-01-151935_1000x562_scrot.png)
 
+Features
+--------
+- mass graph
+- minimap
+- skins
+- show eatability/hostility level of other cells
+- show/hide anything via key bindings
+- extend with your own plugins (more stats, server chooser, bot, ...)
+
+###Roadmap
+- force fields for hostile/eatable cells
+- command-line arguments (nick, gamemode, facebook token)
+- better virus interaction
+- zoom
+- make it work with Ogar
+- documentation
+- config file
+
 Installation
 ------------
 Requires `pip install websocket-client` module for the headless client
