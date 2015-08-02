@@ -1,3 +1,57 @@
+"""
+Example usage
+
+Also available as highlighted markdown:
+https://gist.github.com/Gjum/10bd136ca25304f30e02
+
+Minimal example:
+Reload when '.' key is pressed.
+
+    class Leaderboard(Subscriber, Reloadable):
+        # There is no __init__() with args and no state, so
+        # neither capture_args() nor _persistent_attributes
+        # are needed.
+
+        # We want to reload somehow, so we use a key press event for this
+        def on_key_pressed(self, val, char):
+            if char == '.':  # reload when pressing '.'
+                self.reload()  # note: does not check for syntax/runtime errors
+
+        def on_draw_hud(self, c, w):
+            # ...
+
+Complex example:
+Auto-reload every second, keeping init args and instance state.
+
+    class MassGraph(Subscriber, Reloadable):
+        _persistent_attributes = ['graph']  # restore graph after reload
+
+        def __init__(self, client):
+            # restore client after reload
+            # (when calling __init__, client is supplied as argument)
+            self.capture_args(locals())
+
+            self.reload_timer = 0  # used below
+
+            self.client = client  # set via init arg
+            self.graph = []  # should be kept between reloads
+
+        def on_respawn(self):
+            # ...
+
+        def on_world_update_post(self):
+            # ...
+
+            self.reload_timer += 1
+            if self.reload_timer > 25:  # world updates occur 25x per second
+                # Do not crash if the reload fails.
+                # Note that this does not catch all syntax errors
+                # and still no runtime errors.
+                self.try_reload()
+
+        def on_draw_hud(self, c, w):
+            # ...
+"""
 import importlib, sys, types
 
 
@@ -15,9 +69,9 @@ class Reloadable(object):
         >>> class Foo(Reloadable):
         >>>     def __init__(self, foo, bar=123):
         >>>         super(self.__class__, self).__init__()
-        >>>         self.foo = foo * bar
-        >>>         self.capture_args(locals())
-        >>>         tmp = bar ** 2
+        >>>         self.foo = foo * bar  # just uses `self`, thus not creating a local var
+        >>>         self.capture_args(locals())  # captures self, foo, bar
+        >>>         tmp = bar ** 2  # creates local var `tmp`
         >>>         # ...
         """
         self._init_args = dict(init_args)
