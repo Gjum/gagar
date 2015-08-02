@@ -1,23 +1,3 @@
-"""
-Copyright (C) 2015  Gjum
-
-code.gjum@gmail.com
-
-This file is part of pyagario.
-
-pyagario is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-pyagario is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with pyagario.  If not, see <http://www.gnu.org/licenses/>.
-"""
 import io
 from threading import Thread
 import urllib.request
@@ -32,6 +12,7 @@ from .subscriber import Subscriber
 # TODO support agariomods etc. skins
 
 skin_cache = {}
+
 
 def get_skin(name):
     name = name.lower()

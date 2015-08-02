@@ -1,7 +1,7 @@
 from collections import deque
 from time import time
-from agario.vec import Vec
 
+from agario.vec import Vec
 from .drawutils import *
 from .subscriber import Subscriber
 
