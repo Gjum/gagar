@@ -239,17 +239,10 @@ class GtkControl(Subscriber):
         client.player.nick = nick
         client.connect(address, token)
 
-        # randomly choose a Facebook token to start with more mass
-        # thanks to Xz, Ephemerality, AkiraYasha and DebugMonkey for these
-        fb_tokens = [
-            'g2gDYQFtAAAAEOXtiI8yiD5oRrxypWmeb+9tAAAAUml6/oQLyCzXEzZQk90WTAOkwQu6R7v34L3MOV0XbmB6dyUvqAa4uDQqzA4Q/YHb5b+Ck0oe8KrEKffAz3q/rI+oy7NJ2DOuqTYBOIp74hFnhb8=',
-            'g2gDYQFtAAAAECdGK/jV8GJNRAZI457TvORtAAAAUrY7/H6bolC4jMYHUgt3JVV8iVJw8Fp2mo8jJxDYW04adSMYH1yx+GtsK+24n6ng5LZVYJ/4Wxi8R48D+XZk07ZZ56+reQjF/hy/37NySvaGbY0=',
-            'g2gDYQFtAAAAEJ1Lvesg92BeOL/dPV3VRXNtAAAAUmFEntb7vu1fv+B1ZLc630vlCVO0CgnO+tCRQv+Fyi+XjT/4Zgq42iXrkALDyJPwuuvVvxR0cgQtqfnS3wCDT1znYqmWK0MhauCTQ4xN5B9ZjSA=',
-            'g2gDYQFtAAAAEKO6L3c8C8/eXtbtbVJDGU5tAAAAUvOo7JuWAVSczT5Aj0eo0CvpeU8ijGzKy/gXBVCxhP5UO+ERH0jWjAo9bU1V7dU0GmwFr+SnzqWohx3qvG8Fg8RHlL17/y9ifVWpYUdweuODb9c=',
-        ]
-        fb_token = random.choice(fb_tokens)
-        self.client.send_facebook(fb_token)
-        print('Using FB token', fb_token)
+        # use AkiraYasha's Facebook token to start with more mass (> 43, lvl 56)
+        self.client.send_facebook(
+            'g2gDYQFtAAAAEKO6L3c8C8/eXtbtbVJDGU5tAAAAUvOo7JuWAVSczT5Aj0eo0CvpeU8ijGzKy/gXBVCxhP5UO+ERH0jWjAo9bU1V7dU0GmwFr+SnzqWohx3qvG8Fg8RHlL17/y9ifVWpYUdweuODb9c=')
+        print("Using AkiraYasha's Facebook token")
 
         gtk_watch_client(client)
 
