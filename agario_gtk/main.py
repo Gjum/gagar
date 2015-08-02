@@ -230,6 +230,7 @@ class GtkControl(Subscriber):
         key(Gdk.KEY_F1,
             Minimap(),
             Leaderboard(),
+            ExperienceMeter(),
             Logger(client),
             MassGraph(client),
         )

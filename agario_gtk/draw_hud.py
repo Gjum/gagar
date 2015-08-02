@@ -93,6 +93,40 @@ class MassGraph(Subscriber):
         c.fill()
 
 
+class ExperienceMeter(Subscriber):
+    def __init__(self):
+        self.level = 0
+        self.current_xp = 0
+        self.next_xp = 0
+
+    def on_experience_info(self, level, current_xp, next_xp):
+        self.level = level
+        self.current_xp = current_xp
+        self.next_xp = next_xp
+
+    def on_draw_hud(self, c, w):
+        if self.level == 0: return
+        if w.player.is_alive: return
+        bar_width = 200
+        level_height = 30
+        x = (w.win_size.x - bar_width - level_height) / 2
+        # bar progress
+        bar_progress = bar_width * self.current_xp / self.next_xp
+        c.set_source_rgba(*to_rgba(GREEN, .3))
+        c.rectangle(x, 0, bar_progress, level_height)
+        c.fill()
+        # bar outline
+        c.set_source_rgba(*to_rgba(GREEN, .7))
+        c.rectangle(x, 0, bar_width, level_height)
+        c.stroke()
+        # current level
+        radius = level_height / 2
+        center = (x + bar_width + radius, radius)
+        draw_circle(c, center, radius, to_rgba(YELLOW, .8))
+        draw_text(c, center, '%s' % self.level,
+                  align='center', color=BLACK, size=radius)
+
+
 class FpsMeter(Subscriber):
     def __init__(self, queue_len):
         self.draw_last = self.world_last = time()
