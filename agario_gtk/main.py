@@ -52,6 +52,14 @@ class NativeControl(Subscriber):
         self.movement_delta = pos_world - self.client.player.center
         self.send_mouse()
 
+    def on_mouse_pressed(self, button):
+        if button == 2: # Middle click
+            self.send_mouse()
+            self.client.send_shoot()
+        elif button == 3: # Right click
+            self.send_mouse()
+            self.client.send_split()
+
     def on_key_pressed(self, val, char):
         if char == 'w':
             self.send_mouse()
