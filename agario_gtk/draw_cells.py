@@ -16,7 +16,7 @@ class CellsDrawer(Subscriber):
         # reverse to show small over large cells
         for cell in sorted(w.world.cells.values(), reverse=True):
             pos = w.world_to_screen_pos(cell.pos)
-            draw_circle(c, pos, cell.size * w.screen_scale,
+            draw_circle(c, pos, w.world_to_screen_size(cell.size),
                         color=to_rgba(cell.color, .8))
 
 
@@ -94,7 +94,7 @@ class CellHostility(Subscriber):
             elif cell.mass > own_min_mass * 1.25:
                 color = ORANGE
             c.set_source_rgba(*color)
-            draw_circle_outline(c, pos, cell.size * w.screen_scale)
+            draw_circle_outline(c, pos, w.world_to_screen_size(cell.size))
         c.set_line_width(lw)
 
 

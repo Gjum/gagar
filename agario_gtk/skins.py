@@ -69,7 +69,7 @@ class CellSkins(Subscriber):
                 skin_radius = skin_surface.get_width() / 2
                 c.save()
                 c.translate(*w.world_to_screen_pos(cell.pos))
-                scale = cell.size / skin_radius * w.screen_scale
+                scale = w.world_to_screen_size(cell.size / skin_radius)
                 c.scale(scale, scale)
                 c.translate(-skin_radius, -skin_radius)
                 c.set_source_surface(skin_surface, 0, 0)
