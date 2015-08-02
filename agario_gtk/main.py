@@ -222,6 +222,7 @@ class GtkControl(Subscriber):
             CellHostility(),
             CellMasses(),
             RemergeTimes(client),
+            ForceFields(),
         )
         key('m', MovementLines())
 

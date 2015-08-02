@@ -98,6 +98,34 @@ class CellHostility(Subscriber):
         c.set_line_width(lw)
 
 
+class ForceFields(Subscriber):
+    def on_draw_cells(self, c, w):
+        if not w.player.is_alive: return  # nothing to be hostile against
+        split_dist = 760
+        c.set_line_width(3)
+        c.set_source_rgba(*to_rgba(PURPLE, .5))
+        for cell in w.player.own_cells:
+            pos = w.world_to_screen_pos(cell.pos)
+            radius = split_dist + cell.size / 2
+            draw_circle_outline(c, pos, w.world_to_screen_size(radius))
+
+        own_max_size = max(c.size for c in w.player.own_cells)
+        own_min_mass = min(c.mass for c in w.player.own_cells)
+        c.set_source_rgba(*to_rgba(RED, .5))
+        for cell in w.world.cells.values():
+            if cell.is_food or cell.is_ejected_mass:
+                continue
+            if cell.cid in w.player.own_ids:
+                continue
+            pos = w.world_to_screen_pos(cell.pos)
+            if cell.is_virus:
+                if own_max_size > cell.size:  # dangerous virus
+                    draw_circle_outline(c, pos, w.world_to_screen_size(own_max_size))
+            elif cell.mass > own_min_mass * 1.25 * 2:  # can split+kill me
+                radius = split_dist + cell.size / 2
+                draw_circle_outline(c, pos, w.world_to_screen_size(radius))
+
+
 class MovementLines(Subscriber):
     def on_draw_cells(self, c, w):
         c.set_line_width(1)
