@@ -3,8 +3,8 @@ import sys
 
 from gi.repository import Gtk, GLib, Gdk
 
-from agario.client import Client
-from agario.utils import special_names, get_party_address, find_server
+from agarnet.client import Client
+from agarnet.utils import special_names, get_party_address, find_server
 from .draw_hud import *
 from .draw_cells import *
 from .draw_background import *

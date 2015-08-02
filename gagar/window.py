@@ -1,6 +1,6 @@
 from gi.repository import Gtk, Gdk
 
-from agario.vec import Vec
+from agarnet.vec import Vec
 
 
 class WorldViewer(object):

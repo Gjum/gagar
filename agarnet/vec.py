@@ -1,6 +1,6 @@
 """
 http://doswa.com/2009/07/13/circle-segment-intersectioncollision.html
-Slightly modified for pyagario by Gjum code.gjum@gmail.com
+Slightly modified by Gjum code.gjum@gmail.com
 """
 
 import math

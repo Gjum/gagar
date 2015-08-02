@@ -1,8 +1,9 @@
 import json
-from threading import Thread
-import urllib.request
 import time
-from agario.utils import find_server
+import urllib.request
+from threading import Thread
+
+from .utils import find_server
 
 
 def gcommer_claim(address=None):

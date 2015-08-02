@@ -4,7 +4,7 @@ import urllib.request
 
 import cairo
 
-from agario.utils import moz_headers, special_names
+from agarnet.utils import moz_headers, special_names
 from .drawutils import TWOPI
 from .subscriber import Subscriber
 
