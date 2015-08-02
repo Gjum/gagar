@@ -64,15 +64,15 @@ def draw_text(c, pos, text, align='left', color=WHITE, shadow=None, outline=None
         if align == 'center':
             x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
                 = c.text_extents(text)
-            x = pos[0] - x_bearing - text_width // 2
-            y = pos[1] - y_bearing - text_height // 2
+            x = int(pos[0] - x_bearing - text_width / 2)
+            y = int(pos[1] - y_bearing - text_height / 2)
         elif align == 'left':
-            x, y = pos
+            x, y = map(int, pos)
         elif align == 'right':
             x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
                 = c.text_extents(text)
-            x = pos[0] - x_bearing - text_width
-            y = pos[1]
+            x = int(pos[0] - x_bearing - text_width)
+            y = int(pos[1])
         else:
             raise ValueError('Invalid alignment "%s"' % align)
 
