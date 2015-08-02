@@ -281,7 +281,6 @@ class Client(object):
         level = buf.pop_uint32()
         current_xp = buf.pop_uint32()
         next_xp = buf.pop_uint32()
-        print(*('%s: %s' % l for l in locals().items()))
         self.subscriber.on_experience_info(level=level, current_xp=current_xp, next_xp=next_xp)
 
     def parse_clear_cells(self, buf):
