@@ -183,11 +183,13 @@ class KeyToggler(MultiSubscriber):
 
     def __getattr__(self, func_name):
         if self.enabled and func_name[:3] == 'on_':
-            return super(KeyToggler, self).__getattr__(func_name)
+            return MultiSubscriber.__getattr__(self, func_name)
+        return lambda *_, **__: None
 
     def on_key_pressed(self, val, char):
         if val == self.toggle_key:
             self.enabled = not self.enabled
+        self.__getattr__('on_key_pressed')(val, char)
 
 
 class GtkControl(Subscriber):
