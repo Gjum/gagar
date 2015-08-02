@@ -61,6 +61,8 @@ class WorldViewer(object):
         window.set_events(Gdk.EventMask.POINTER_MOTION_MASK)
         window.connect('key-press-event', self.key_pressed)
         window.connect('motion-notify-event', self.mouse_moved)
+        window.connect('button-press-event', self.mouse_pressed)
+
         self.drawing_area.connect('draw', self.draw)
 
         window.show_all()
@@ -95,6 +97,11 @@ class WorldViewer(object):
         self.mouse_pos = Vec(event.x, event.y)
         pos_world = self.screen_to_world_pos(self.mouse_pos)
         self.input_subscriber.on_mouse_moved(pos=self.mouse_pos, pos_world=pos_world)
+
+    def mouse_pressed(self, _, event):
+        """Called by GTK. Set input_subscriber to handle this."""
+        if not self.input_subscriber: return
+        self.input_subscriber.on_mouse_pressed(button=event.button)
 
     def world_to_screen_pos(self, world_pos):
         return (world_pos - self.world_center) \
