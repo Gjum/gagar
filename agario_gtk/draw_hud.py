@@ -42,12 +42,8 @@ class Minimap(Subscriber):
 
 class Leaderboard(Subscriber):
     def on_draw_hud(self, c, w):
-        lb_x = w.win_size.x - w.INFO_SIZE
-
-        c.set_source_rgba(*to_rgba(BLACK, .6))
-        c.rectangle(lb_x, 0,
-                    w.INFO_SIZE, 21 * len(w.world.leaderboard_names))
-        c.fill()
+        draw_text(c, (w.win_size.x - 10, 30), 'Leaderboard',
+                  align='right', color=WHITE, outline=(BLACK, 2), size=27)
 
         player_cid = min(c.cid for c in w.player.own_cells) \
             if w.player and w.player.own_ids else -1
@@ -55,14 +51,15 @@ class Leaderboard(Subscriber):
         for rank, (cid, name) in enumerate(w.world.leaderboard_names):
             rank += 1  # start at rank 1
             name = name or 'An unnamed cell'
-            text = '%i. %s (%s)' % (rank, name, cid)
+            text = '%s (%i)' % (name, rank)
             if cid == player_cid:
                 color = RED
             elif cid in w.world.cells:
-                color = LIGHT_BLUE
+                color = LIGHT_GRAY
             else:
                 color = WHITE
-            draw_text_left(c, (lb_x+10, 20*rank), text, color=color)
+            draw_text(c, (w.win_size.x - 10, 40 + 23*rank), text,
+                      align='right', color=color, outline=(BLACK, 2), size=18)
 
 
 class MassGraph(Subscriber):
@@ -94,6 +91,40 @@ class MassGraph(Subscriber):
             c.line_to(i * scale_x, total_mass * scale_y)
         c.line_to(w.INFO_SIZE, 0)
         c.fill()
+
+
+class ExperienceMeter(Subscriber):
+    def __init__(self):
+        self.level = 0
+        self.current_xp = 0
+        self.next_xp = 0
+
+    def on_experience_info(self, level, current_xp, next_xp):
+        self.level = level
+        self.current_xp = current_xp
+        self.next_xp = next_xp
+
+    def on_draw_hud(self, c, w):
+        if self.level == 0: return
+        if w.player.is_alive: return
+        bar_width = 200
+        level_height = 30
+        x = (w.win_size.x - bar_width - level_height) / 2
+        # bar progress
+        bar_progress = bar_width * self.current_xp / self.next_xp
+        c.set_source_rgba(*to_rgba(GREEN, .3))
+        c.rectangle(x, 0, bar_progress, level_height)
+        c.fill()
+        # bar outline
+        c.set_source_rgba(*to_rgba(GREEN, .7))
+        c.rectangle(x, 0, bar_width, level_height)
+        c.stroke()
+        # current level
+        radius = level_height / 2
+        center = (x + bar_width + radius, radius)
+        draw_circle(c, center, radius, to_rgba(YELLOW, .8))
+        draw_text(c, center, '%s' % self.level,
+                  align='center', color=BLACK, size=radius)
 
 
 class FpsMeter(Subscriber):

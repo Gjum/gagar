@@ -169,8 +169,8 @@ class Logger(Subscriber):
         c.fill()
 
         for i, text in enumerate(log[-num_log_lines:]):
-            draw_text_left(c, (0, y_start + i*log_line_h),
-                           text, size=10, face='monospace')
+            draw_text(c, (0, y_start + i*log_line_h), text,
+                      align='left', size=10, face='monospace')
 
 
 def gtk_watch_client(client):
@@ -236,7 +236,8 @@ class GtkControl(Subscriber):
         key('i',
             CellHostility(),
             CellMasses(),
-            RemergeTimes(client.player),
+            RemergeTimes(client),
+            ForceFields(),
         )
         key('m', MovementLines())
 
@@ -244,6 +245,7 @@ class GtkControl(Subscriber):
         key(Gdk.KEY_F1,
             Minimap(),
             Leaderboard(),
+            ExperienceMeter(),
             Logger(client),
             MassGraph(client),
         )
