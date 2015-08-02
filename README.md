@@ -13,11 +13,11 @@ Features
 - minimap
 - skins
 - show eatability/hostility level of other cells
+- force fields for eatable/hostile cells
 - show/hide anything via key bindings
 - extend with your own plugins (more stats, server chooser, bot, ...)
 
 ###Roadmap
-- force fields for hostile/eatable cells
 - command-line arguments (nick, gamemode, facebook token)
 - better virus interaction
 - zoom
@@ -35,6 +35,8 @@ Under Arch Linux, you may also want to run
     pacman -S python-gobject python-cairo pygtk
 
 to install the GTK dependencies. Other distros should have similar packages.
+
+Someone also got it to work on Mac using MacPorts.
 
 Run the GUI with
 
