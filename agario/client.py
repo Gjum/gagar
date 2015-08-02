@@ -92,7 +92,7 @@ class Client(object):
         :return: True if connected, False if not
         """
         if self.is_connected:
-            self.subscriber.on_log_msg('Already connected to "%s"' % self.address)
+            self.subscriber.on_connect_error('Already connected to "%s"' % self.address)
             return False
 
         self.address, self.token = address, token
@@ -101,13 +101,13 @@ class Client(object):
         self.ws.settimeout(1)
         self.ws.connect('ws://%s' % self.address, origin='http://agar.io')
         if not self.is_connected:
-            self.subscriber.on_log_msg('Failed to connect to "%s"' % self.address)
+            self.subscriber.on_connect_error('Failed to connect to "%s"' % self.address)
             return False
 
         self.subscriber.on_sock_open()
         # allow handshake canceling
         if not self.is_connected:
-            self.subscriber.on_log_msg('Disconnected before sending handshake')
+            self.subscriber.on_connect_error('Disconnected before sending handshake')
             return False
 
         self.send_handshake()
@@ -143,14 +143,14 @@ class Client(object):
             self.disconnect()
             return
         if not msg:
-            self.subscriber.on_log_msg('ERROR empty message received')
+            self.subscriber.on_message_error('Empty message received')
             return
         buf = BufferStruct(msg)
         opcode = buf.pop_uint8()
         try:
             packet_name = packet_s2c[opcode]
         except KeyError:
-            self.subscriber.on_log_msg('ERROR unknown packet %s' % opcode)
+            self.subscriber.on_message_error('Unknown packet %s' % opcode)
             return
         if not self.ingame and packet_name in ingame_packets:
             self.subscriber.on_ingame()
@@ -161,8 +161,8 @@ class Client(object):
             assert len(buf.buffer) == 0, \
                 'Buffer not empty after parsing "%s" packet' % packet_name
         except BufferUnderflowError as e:
-            msg = 'ERROR parsing %s packet failed: %s' % (packet_name, e.args[0])
-            self.subscriber.on_log_msg(msg)
+            msg = 'Parsing %s packet failed: %s' % (packet_name, e.args[0])
+            self.subscriber.on_message_error(msg)
             raise e
 
     def parse_world_update(self, buf):
