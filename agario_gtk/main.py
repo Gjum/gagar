@@ -109,6 +109,11 @@ class Logger(Subscriber):
     def on_update_msg(self, msg, update=9):
         self.on_log_msg(msg=msg, update=update)
 
+    def on_connect_error(self, msg):
+        self.on_log_msg(msg, tag='[ERROR]')
+
+    on_message_error = on_connect_error
+
     def on_sock_open(self):
         self.on_update_msg('Connected to %s' % self.client.address)
         self.on_update_msg('Token: %s' % self.client.token)
@@ -169,7 +174,7 @@ class Logger(Subscriber):
 
 
 def gtk_watch_client(client):
-    # watch clinet's websocket in GTK main loop
+    # watch client's websocket in GTK main loop
     # `or True` is for always returning True to keep watching
     GLib.io_add_watch(client.ws, GLib.IO_IN, lambda ws, _: client.on_message() or True)
     GLib.io_add_watch(client.ws, GLib.IO_ERR, lambda ws, _: client.subscriber.on_sock_error() or True)
