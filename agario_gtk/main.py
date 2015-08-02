@@ -87,7 +87,7 @@ class Logger(Subscriber):
         self.log_msgs = []
         self.leader_best = 11 # outside leaderboard, to show first msg on >=10
 
-    def on_log_msg(self, msg, update=0):
+    def on_log_msg(self, msg, update=0, tag='[LOG]'):
         """
         Updates last `update` msgs with new data.
         Compares first 5 chars or up to first space.
@@ -102,7 +102,7 @@ class Logger(Subscriber):
         else:
             self.log_msgs.append(msg)
             try:
-                print('[LOG]', msg)
+                print(tag, msg)
             except UnicodeEncodeError:
                 pass
 
