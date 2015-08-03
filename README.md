@@ -27,21 +27,28 @@ Features
 
 Installation
 ------------
-First install agarnet:
-
-    pip install agarnet
-
-Under Arch Linux, you then want to run
+First of all, install the GTK dependencies.
+Under Arch Linux, run
 
     pacman -S python-gobject python-cairo pygtk
 
-to install the GTK dependencies. Other distros should have similar packages.
+Other distros should have similar packages.
+Someone told me it works on Mac using MacPorts.
+If you get it to work, please comment on [this issue](https://github.com/Gjum/gagar/issues/8), so I can add instructions for your system.
 
-Someone also got it to work on Mac using MacPorts.
+The client itself cn be installed from [PyPI](https://pypi.python.org/pypi?name=gagar&:action=display) with
+
+    pip install gagar
+
+or, if you want to get the source code,
+
+    git clone git@github.com:Gjum/gagar.git
+    cd gagar/
+    python3 setup.py install
 
 Run the GUI with
 
-    python3 main.py -h
+    gagar -h
 
 Controls
 --------
