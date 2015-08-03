@@ -27,10 +27,11 @@ Features
 
 Installation
 ------------
-Requires `pip install websocket-client` module for the headless client
-and GTK for the optional GUI.
+First install agarnet:
 
-Under Arch Linux, you may also want to run
+    pip install agarnet
+
+Under Arch Linux, you then want to run
 
     pacman -S python-gobject python-cairo pygtk
 
