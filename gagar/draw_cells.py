@@ -1,6 +1,6 @@
 from time import time
-from agario.vec import Vec
 
+from agarnet.vec import Vec
 from .subscriber import Subscriber
 from .drawutils import *
 
