@@ -143,14 +143,14 @@ class Logger(Subscriber):
 
         y_start = w.win_size.y - num_log_lines*log_line_h + 9
 
-        c.set_source_rgba(*to_rgba(BLACK, .3))
-        c.rectangle(0, w.win_size.y - num_log_lines*log_line_h,
+        c._cairo_context.set_source_rgba(*to_rgba(BLACK, .3))
+        c._cairo_context.rectangle(0, w.win_size.y - num_log_lines*log_line_h,
                     w.INFO_SIZE, num_log_lines*log_line_h)
-        c.fill()
+        c._cairo_context.fill()
 
         for i, text in enumerate(log[-num_log_lines:]):
-            draw_text(c, (0, y_start + i*log_line_h), text,
-                      align='left', size=10, face='monospace')
+            c.draw_text((0, y_start + i*log_line_h), text,
+                        align='left', size=10, face='monospace')
 
 
 def gtk_watch_client(client):

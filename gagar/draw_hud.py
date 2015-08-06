@@ -2,6 +2,7 @@ from collections import deque
 from time import time
 
 from agarnet.vec import Vec
+
 from .drawutils import *
 from .subscriber import Subscriber
 
@@ -18,32 +19,32 @@ class Minimap(Subscriber):
                 pos_from_top_left = world_pos - w.world.top_left
                 return minimap_offset + pos_from_top_left * minimap_scale
 
-            line_width = c.get_line_width()
-            c.set_line_width(1)
+            line_width = c._cairo_context.get_line_width()
+            c._cairo_context.set_line_width(1)
 
             # minimap background
-            c.set_source_rgba(*to_rgba(DARK_GRAY, .8))
-            c.rectangle(*as_rect(minimap_offset, size=minimap_size))
-            c.fill()
+            c._cairo_context.set_source_rgba(*to_rgba(DARK_GRAY, .8))
+            c._cairo_context.rectangle(*as_rect(minimap_offset, size=minimap_size))
+            c._cairo_context.fill()
 
             # outline the area visible in window
-            c.set_source_rgba(*BLACK)
-            c.rectangle(*as_rect(world_to_map(w.screen_to_world_pos(Vec(0,0))),
+            c._cairo_context.set_source_rgba(*BLACK)
+            c._cairo_context.rectangle(*as_rect(world_to_map(w.screen_to_world_pos(Vec(0,0))),
                                  world_to_map(w.screen_to_world_pos(w.win_size))))
-            c.stroke()
+            c._cairo_context.stroke()
 
             for cell in w.world.cells.values():
-                draw_circle_outline(c, world_to_map(cell.pos),
-                                    cell.size * minimap_scale,
-                                    color=to_rgba(cell.color, .8))
+                c.draw_circle_outline(world_to_map(cell.pos),
+                                      cell.size * minimap_scale,
+                                      color=to_rgba(cell.color, .8))
 
-            c.set_line_width(line_width)
+            c._cairo_context.set_line_width(line_width)
 
 
 class Leaderboard(Subscriber):
     def on_draw_hud(self, c, w):
-        draw_text(c, (w.win_size.x - 10, 30), 'Leaderboard',
-                  align='right', color=WHITE, outline=(BLACK, 2), size=27)
+        c.draw_text((w.win_size.x - 10, 30), 'Leaderboard',
+                    align='right', color=WHITE, outline=(BLACK, 2), size=27)
 
         player_cid = min(c.cid for c in w.player.own_cells) \
             if w.player and w.player.own_ids else -1
@@ -58,8 +59,8 @@ class Leaderboard(Subscriber):
                 color = LIGHT_GRAY
             else:
                 color = WHITE
-            draw_text(c, (w.win_size.x - 10, 40 + 23*rank), text,
-                      align='right', color=color, outline=(BLACK, 2), size=18)
+            c.draw_text((w.win_size.x - 10, 40 + 23*rank), text,
+                        align='right', color=color, outline=(BLACK, 2), size=18)
 
 
 class MassGraph(Subscriber):
@@ -81,6 +82,7 @@ class MassGraph(Subscriber):
         self.graph.append(sample)
 
     def on_draw_hud(self, c, w):
+        c = c._cairo_context
         if not self.graph:
             return
         scale_x = w.INFO_SIZE / len(self.graph)
@@ -112,19 +114,19 @@ class ExperienceMeter(Subscriber):
         x = (w.win_size.x - bar_width - level_height) / 2
         # bar progress
         bar_progress = bar_width * self.current_xp / self.next_xp
-        c.set_source_rgba(*to_rgba(GREEN, .3))
-        c.rectangle(x, 0, bar_progress, level_height)
-        c.fill()
+        c._cairo_context.set_source_rgba(*to_rgba(GREEN, .3))
+        c._cairo_context.rectangle(x, 0, bar_progress, level_height)
+        c._cairo_context.fill()
         # bar outline
-        c.set_source_rgba(*to_rgba(GREEN, .7))
-        c.rectangle(x, 0, bar_width, level_height)
-        c.stroke()
+        c._cairo_context.set_source_rgba(*to_rgba(GREEN, .7))
+        c._cairo_context.rectangle(x, 0, bar_width, level_height)
+        c._cairo_context.stroke()
         # current level
         radius = level_height / 2
         center = (x + bar_width + radius, radius)
-        draw_circle(c, center, radius, to_rgba(YELLOW, .8))
-        draw_text(c, center, '%s' % self.level,
-                  align='center', color=BLACK, size=radius)
+        c.draw_circle(center, radius, to_rgba(YELLOW, .8))
+        c.draw_text(center, '%s' % self.level,
+                    align='center', color=BLACK, size=radius)
 
 
 class FpsMeter(Subscriber):
@@ -140,6 +142,7 @@ class FpsMeter(Subscriber):
         self.world_times.appendleft(dt)
 
     def on_draw_hud(self, c, w):
+        c = c._cairo_context
         c.set_line_width(2)
         c.set_source_rgba(*to_rgba(RED, .3))
         for i, t in enumerate(self.draw_times):

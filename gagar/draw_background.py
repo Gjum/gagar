@@ -7,12 +7,14 @@ class SolidBackground(Subscriber):
         self.color = color
 
     def on_draw_background(self, c, w):
+        c = c._cairo_context
         c.set_source_rgba(*self.color)
         c.paint()
 
 
 class GridDrawer(Subscriber):
     def on_draw_background(self, c, w):
+        c = c._cairo_context
         wl, wt = w.world_to_screen_pos(w.world.top_left)
         wr, wb = w.world_to_screen_pos(w.world.bottom_right)
         grid_spacing = w.world_to_screen_size(50)
@@ -30,6 +32,7 @@ class GridDrawer(Subscriber):
 
 class WorldBorderDrawer(Subscriber):
     def on_draw_background(self, c, w):
+        c = c._cairo_context
         wl, wt = w.world_to_screen_pos(w.world.top_left)
         wr, wb = w.world_to_screen_pos(w.world.bottom_right)
         c.set_line_width(4)

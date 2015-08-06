@@ -16,8 +16,8 @@ class CellsDrawer(Subscriber):
         # reverse to show small over large cells
         for cell in sorted(w.world.cells.values(), reverse=True):
             pos = w.world_to_screen_pos(cell.pos)
-            draw_circle(c, pos, w.world_to_screen_size(cell.size),
-                        color=to_rgba(cell.color, .8))
+            c.draw_circle(pos, w.world_to_screen_size(cell.size),
+                          color=to_rgba(cell.color, .8))
 
 
 class CellNames(Subscriber):
@@ -26,8 +26,8 @@ class CellNames(Subscriber):
             if cell.name:
                 pos = w.world_to_screen_pos(cell.pos)
                 size = nick_size(cell, w)
-                draw_text(c, pos, '%s' % cell.name,
-                          align='center', outline=(BLACK, 2), size=size)
+                c.draw_text(pos, '%s' % cell.name,
+                            align='center', outline=(BLACK, 2), size=size)
 
 
 class RemergeTimes(Subscriber):
@@ -50,8 +50,8 @@ class RemergeTimes(Subscriber):
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
             pos.isub(Vec(0, (info_size + nick_size(cell, w)) / 2))
-            draw_text(c, pos, 'TTR %.1fs after %.1fs' % (ttr, split_for),
-                      align='center', outline=(BLACK, 2), size=info_size)
+            c.draw_text(pos, 'TTR %.1fs after %.1fs' % (ttr, split_for),
+                        align='center', outline=(BLACK, 2), size=info_size)
 
 
 class CellMasses(Subscriber):
@@ -62,8 +62,8 @@ class CellMasses(Subscriber):
             pos = w.world_to_screen_pos(cell.pos)
             if cell.name:
                 pos.iadd(Vec(0, (info_size + nick_size(cell, w)) / 2))
-            draw_text(c, pos, '%i' % cell.mass,
-                      align='center', outline=(BLACK, 2), size=info_size)
+            c.draw_text(pos, '%i' % cell.mass,
+                        align='center', outline=(BLACK, 2), size=info_size)
 
 
 class CellHostility(Subscriber):
@@ -71,8 +71,8 @@ class CellHostility(Subscriber):
         if not w.player.is_alive: return  # nothing to be hostile against
         own_min_mass = min(c.mass for c in w.player.own_cells)
         own_max_mass = max(c.mass for c in w.player.own_cells)
-        lw = c.get_line_width()
-        c.set_line_width(5)
+        lw = c._cairo_context.get_line_width()
+        c._cairo_context.set_line_width(5)
         for cell in w.world.cells.values():
             if cell.is_food or cell.is_ejected_mass:
                 continue  # no threat
@@ -93,25 +93,25 @@ class CellHostility(Subscriber):
                 color = RED
             elif cell.mass > own_min_mass * 1.25:
                 color = ORANGE
-            c.set_source_rgba(*color)
-            draw_circle_outline(c, pos, w.world_to_screen_size(cell.size))
-        c.set_line_width(lw)
+            c._cairo_context.set_source_rgba(*color)
+            c.draw_circle_outline(pos, w.world_to_screen_size(cell.size))
+        c._cairo_context.set_line_width(lw)
 
 
 class ForceFields(Subscriber):
     def on_draw_cells(self, c, w):
         if not w.player.is_alive: return  # nothing to be hostile against
         split_dist = 760
-        c.set_line_width(3)
-        c.set_source_rgba(*to_rgba(PURPLE, .5))
+        c._cairo_context.set_line_width(3)
+        c._cairo_context.set_source_rgba(*to_rgba(PURPLE, .5))
         for cell in w.player.own_cells:
             pos = w.world_to_screen_pos(cell.pos)
             radius = split_dist + cell.size / 2
-            draw_circle_outline(c, pos, w.world_to_screen_size(radius))
+            c.draw_circle_outline(pos, w.world_to_screen_size(radius))
 
         own_max_size = max(c.size for c in w.player.own_cells)
         own_min_mass = min(c.mass for c in w.player.own_cells)
-        c.set_source_rgba(*to_rgba(RED, .5))
+        c._cairo_context.set_source_rgba(*to_rgba(RED, .5))
         for cell in w.world.cells.values():
             if cell.is_food or cell.is_ejected_mass:
                 continue
@@ -120,14 +120,15 @@ class ForceFields(Subscriber):
             pos = w.world_to_screen_pos(cell.pos)
             if cell.is_virus:
                 if own_max_size > cell.size:  # dangerous virus
-                    draw_circle_outline(c, pos, w.world_to_screen_size(own_max_size))
+                    c.draw_circle_outline(pos, w.world_to_screen_size(own_max_size))
             elif cell.mass > own_min_mass * 1.25 * 2:  # can split+kill me
                 radius = split_dist + cell.size / 2
-                draw_circle_outline(c, pos, w.world_to_screen_size(radius))
+                c.draw_circle_outline(pos, w.world_to_screen_size(radius))
 
 
 class MovementLines(Subscriber):
     def on_draw_cells(self, c, w):
+        c = c._cairo_context
         c.set_line_width(1)
         c.set_source_rgba(*to_rgba(BLACK, .3))
         for cell in w.player.own_cells:
