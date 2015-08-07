@@ -36,29 +36,46 @@ class Canvas(object):
     def __init__(self, cairo_context):
         self._cairo_context = cairo_context
 
-    def draw_text(self, pos, text, align='left', color=WHITE,
-                  shadow=None, outline=None, size=12, face='sans'):
+    def draw_text(self, pos, text, size=12, face='sans',
+                  align=None, anchor_x='left', anchor_y='baseline',
+                  color=WHITE, shadow=None, outline=None):
         c = self._cairo_context
         try:
             c.select_font_face(face)
             c.set_font_size(size)
 
-            align = align.lower()
-            if align == 'center':
-                x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
-                    = c.text_extents(text)
-                x = int(pos[0] - x_bearing - text_width / 2)
-                y = int(pos[1] - y_bearing - text_height / 2)
-            elif align == 'left':
-                x, y = map(int, pos)
-            elif align == 'right':
-                x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
-                    = c.text_extents(text)
-                x = int(pos[0] - x_bearing - text_width)
-                y = int(pos[1])
-            else:
-                raise ValueError('Invalid alignment "%s"' % align)
+            # align overrides anchors
+            if align:
+                anchor_x = align
+                anchor_y = 'baseline'
 
+            # move text to the correct position
+            x_bearing, y_bearing, text_width, text_height, x_advance, y_advance \
+                = c.text_extents(text)
+            x, y = map(int, pos)
+            x -= x_bearing
+
+            if anchor_x == 'center':
+                x -= text_width // 2
+            elif anchor_x == 'right':
+                x -= text_width
+            elif anchor_x == 'left':
+                pass
+            else:
+                raise ValueError('Invalid anchor_x "%s"' % anchor_x)
+
+            if anchor_y == 'center':
+                y -= y_bearing + text_height // 2
+            elif anchor_y == 'top':
+                y -= y_bearing
+            elif anchor_y == 'bottom':
+                y -= y_bearing + text_height
+            elif anchor_y == 'baseline':
+                pass
+            else:
+                raise ValueError('Invalid anchor_y "%s"' % anchor_y)
+
+            # optionally, draw shadow/outline behind the text
             if shadow:
                 s_color, s_offset = shadow
                 s_dx, s_dy = s_offset
@@ -74,11 +91,12 @@ class Canvas(object):
                 c.text_path(text)
                 c.stroke()
 
+            # draw the text itself
             c.move_to(x, y)
             c.set_source_rgba(*color)
             c.text_path(text)
             c.fill()
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # tried to display invalid chars
             pass
 
     def fill_circle(self, pos, radius, color=None):
