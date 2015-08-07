@@ -1,6 +1,8 @@
 gagar
 =====
 
+[![Latest PyPI version](https://img.shields.io/pypi/v/gagar.svg?style=flat)](https://pypi.python.org/pypi/gagar/)
+[![Number of PyPI downloads](https://img.shields.io/pypi/dm/gagar.svg?style=flat)](https://pypi.python.org/pypi/gagar/)
 [![Join the chat at https://gitter.im/Gjum/gagar](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Gjum/gagar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Standalone graphical [agar.io](http://agar.io/) Python client using GTK
