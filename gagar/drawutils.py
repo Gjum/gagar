@@ -30,14 +30,6 @@ def to_rgba(c, a):
     return c[0], c[1], c[2], a
 
 
-def as_rect(tl, br=None, size=None):
-    """Make tuple from 2 Vecs. Either bottom-right or rect size must be given."""
-    if size:
-        return tl.x, tl.y, size.x, size.y
-    else:
-        return tl.x, tl.y, br.x-tl.x, br.y-tl.y
-
-
 class Canvas(object):
     """Bundles all drawing methods, providing a useful abstraction layer."""
 
@@ -89,20 +81,68 @@ class Canvas(object):
         except UnicodeEncodeError:
             pass
 
-    def draw_circle(self, pos, radius, color=None):
+    def fill_circle(self, pos, radius, color=None):
         c = self._cairo_context
         x, y = pos
-        if color:
-            c.set_source_rgba(*color)
+        if color: c.set_source_rgba(*color)
         c.new_sub_path()
         c.arc(x, y, radius, 0, TWOPI)
         c.fill()
 
-    def draw_circle_outline(self, pos, radius, color=None):
+    def stroke_circle(self, pos, radius, width=None, color=None):
         c = self._cairo_context
         x, y = pos
-        if color:
-            c.set_source_rgba(*color)
+        if width: c.set_line_width(width)
+        if color: c.set_source_rgba(*color)
         c.new_sub_path()
         c.arc(x, y, radius, 0, TWOPI)
         c.stroke()
+
+    def fill_rect(self, left_top, right_bottom=None, size=None, color=None):
+        c = self._cairo_context
+        left, top = left_top
+        if color: c.set_source_rgba(*color)
+        if right_bottom:
+            right, bottom = right_bottom
+            c.rectangle(left, top, right - left, bottom - top)
+        elif size:
+            c.rectangle(left, top, *size)
+        c.fill()
+
+    def stroke_rect(self, left_top, right_bottom=None, size=None,
+                          width=None, color=None):
+        c = self._cairo_context
+        left, top = left_top
+        if width: c.set_line_width(width)
+        if color: c.set_source_rgba(*color)
+        if right_bottom:
+            right, bottom = right_bottom
+            c.rectangle(left, top, right - left, bottom - top)
+        elif size:
+            c.rectangle(left, top, *size)
+        c.stroke()
+
+    def draw_line(self, start, *points, relative=None, width=None, color=None):
+        c = self._cairo_context
+        if width: c.set_line_width(width)
+        if color: c.set_source_rgba(*color)
+        c.move_to(*start)
+        if relative:
+            c.rel_line_to(relative)
+        else:
+            for point in points:
+                c.line_to(*point)
+        c.stroke()
+
+    def fill_polygon(self, start, *points, color=None):
+        c = self._cairo_context
+        if color: c.set_source_rgba(*color)
+        c.move_to(*start)
+        for point in points:
+            c.line_to(*point)
+        c.fill()
+
+    def fill_color(self, color):
+        c = self._cairo_context
+        c.set_source_rgba(*color)
+        c.paint()

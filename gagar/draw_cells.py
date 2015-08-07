@@ -16,7 +16,7 @@ class CellsDrawer(Subscriber):
         # reverse to show small over large cells
         for cell in sorted(w.world.cells.values(), reverse=True):
             pos = w.world_to_screen_pos(cell.pos)
-            c.draw_circle(pos, w.world_to_screen_size(cell.size),
+            c.fill_circle(pos, w.world_to_screen_size(cell.size),
                           color=to_rgba(cell.color, .8))
 
 
@@ -71,8 +71,6 @@ class CellHostility(Subscriber):
         if not w.player.is_alive: return  # nothing to be hostile against
         own_min_mass = min(c.mass for c in w.player.own_cells)
         own_max_mass = max(c.mass for c in w.player.own_cells)
-        lw = c._cairo_context.get_line_width()
-        c._cairo_context.set_line_width(5)
         for cell in w.world.cells.values():
             if cell.is_food or cell.is_ejected_mass:
                 continue  # no threat
@@ -93,25 +91,22 @@ class CellHostility(Subscriber):
                 color = RED
             elif cell.mass > own_min_mass * 1.25:
                 color = ORANGE
-            c._cairo_context.set_source_rgba(*color)
-            c.draw_circle_outline(pos, w.world_to_screen_size(cell.size))
-        c._cairo_context.set_line_width(lw)
+            c.stroke_circle(pos, w.world_to_screen_size(cell.size),
+                            width=5, color=color)
 
 
 class ForceFields(Subscriber):
     def on_draw_cells(self, c, w):
         if not w.player.is_alive: return  # nothing to be hostile against
         split_dist = 760
-        c._cairo_context.set_line_width(3)
-        c._cairo_context.set_source_rgba(*to_rgba(PURPLE, .5))
         for cell in w.player.own_cells:
             pos = w.world_to_screen_pos(cell.pos)
             radius = split_dist + cell.size / 2
-            c.draw_circle_outline(pos, w.world_to_screen_size(radius))
+            c.stroke_circle(pos, w.world_to_screen_size(radius),
+                            width=3, color=to_rgba(PURPLE, .5))
 
         own_max_size = max(c.size for c in w.player.own_cells)
         own_min_mass = min(c.mass for c in w.player.own_cells)
-        c._cairo_context.set_source_rgba(*to_rgba(RED, .5))
         for cell in w.world.cells.values():
             if cell.is_food or cell.is_ejected_mass:
                 continue
@@ -120,18 +115,16 @@ class ForceFields(Subscriber):
             pos = w.world_to_screen_pos(cell.pos)
             if cell.is_virus:
                 if own_max_size > cell.size:  # dangerous virus
-                    c.draw_circle_outline(pos, w.world_to_screen_size(own_max_size))
+                    c.stroke_circle(pos, w.world_to_screen_size(own_max_size),
+                                    width=3, color=to_rgba(RED, .5))
             elif cell.mass > own_min_mass * 1.25 * 2:  # can split+kill me
                 radius = split_dist + cell.size / 2
-                c.draw_circle_outline(pos, w.world_to_screen_size(radius))
+                c.stroke_circle(pos, w.world_to_screen_size(radius),
+                                width=3, color=to_rgba(RED, .5))
 
 
 class MovementLines(Subscriber):
     def on_draw_cells(self, c, w):
-        c = c._cairo_context
-        c.set_line_width(1)
-        c.set_source_rgba(*to_rgba(BLACK, .3))
         for cell in w.player.own_cells:
-            c.move_to(*w.world_to_screen_pos(cell.pos))
-            c.line_to(*w.mouse_pos)
-            c.stroke()
+            c.draw_line(w.world_to_screen_pos(cell.pos), w.mouse_pos,
+                        width=1, color=to_rgba(BLACK, .3))

@@ -19,26 +19,19 @@ class Minimap(Subscriber):
                 pos_from_top_left = world_pos - w.world.top_left
                 return minimap_offset + pos_from_top_left * minimap_scale
 
-            line_width = c._cairo_context.get_line_width()
-            c._cairo_context.set_line_width(1)
-
             # minimap background
-            c._cairo_context.set_source_rgba(*to_rgba(DARK_GRAY, .8))
-            c._cairo_context.rectangle(*as_rect(minimap_offset, size=minimap_size))
-            c._cairo_context.fill()
+            c.fill_rect(minimap_offset, size=minimap_size,
+                        color=to_rgba(DARK_GRAY, .8))
 
             # outline the area visible in window
-            c._cairo_context.set_source_rgba(*BLACK)
-            c._cairo_context.rectangle(*as_rect(world_to_map(w.screen_to_world_pos(Vec(0,0))),
-                                 world_to_map(w.screen_to_world_pos(w.win_size))))
-            c._cairo_context.stroke()
+            c.stroke_rect(world_to_map(w.screen_to_world_pos(Vec(0, 0))),
+                          world_to_map(w.screen_to_world_pos(w.win_size)),
+                          width=1, color=BLACK)
 
             for cell in w.world.cells.values():
-                c.draw_circle_outline(world_to_map(cell.pos),
-                                      cell.size * minimap_scale,
-                                      color=to_rgba(cell.color, .8))
-
-            c._cairo_context.set_line_width(line_width)
+                c.stroke_circle(world_to_map(cell.pos),
+                                cell.size * minimap_scale,
+                                color=to_rgba(cell.color, .8))
 
 
 class Leaderboard(Subscriber):
@@ -82,17 +75,14 @@ class MassGraph(Subscriber):
         self.graph.append(sample)
 
     def on_draw_hud(self, c, w):
-        c = c._cairo_context
         if not self.graph:
             return
         scale_x = w.INFO_SIZE / len(self.graph)
         scale_y = w.INFO_SIZE / (max(self.graph)[0] or 10)
-        c.set_source_rgba(*to_rgba(BLUE, .3))
-        c.move_to(0, 0)
+        points = [(w.INFO_SIZE, 0), (0, 0)]
         for i, (total_mass, masses) in enumerate(reversed(self.graph)):
-            c.line_to(i * scale_x, total_mass * scale_y)
-        c.line_to(w.INFO_SIZE, 0)
-        c.fill()
+            points.append((i * scale_x, total_mass * scale_y))
+        c.fill_polygon(*points, color=to_rgba(BLUE, .3))
 
 
 class ExperienceMeter(Subscriber):
@@ -114,17 +104,15 @@ class ExperienceMeter(Subscriber):
         x = (w.win_size.x - bar_width - level_height) / 2
         # bar progress
         bar_progress = bar_width * self.current_xp / self.next_xp
-        c._cairo_context.set_source_rgba(*to_rgba(GREEN, .3))
-        c._cairo_context.rectangle(x, 0, bar_progress, level_height)
-        c._cairo_context.fill()
+        c.fill_rect((x, 0), size=(bar_progress, level_height),
+                    color=to_rgba(GREEN, .3))
         # bar outline
-        c._cairo_context.set_source_rgba(*to_rgba(GREEN, .7))
-        c._cairo_context.rectangle(x, 0, bar_width, level_height)
-        c._cairo_context.stroke()
+        c.stroke_rect((x, 0), size=(bar_width, level_height),
+                      width=2, color=to_rgba(GREEN, .7))
         # current level
         radius = level_height / 2
         center = (x + bar_width + radius, radius)
-        c.draw_circle(center, radius, to_rgba(YELLOW, .8))
+        c.fill_circle(center, radius, color=to_rgba(YELLOW, .8))
         c.draw_text(center, '%s' % self.level,
                     align='center', color=BLACK, size=radius)
 
@@ -142,28 +130,20 @@ class FpsMeter(Subscriber):
         self.world_times.appendleft(dt)
 
     def on_draw_hud(self, c, w):
-        c = c._cairo_context
-        c.set_line_width(2)
-        c.set_source_rgba(*to_rgba(RED, .3))
         for i, t in enumerate(self.draw_times):
-            c.move_to(*(w.win_size - Vec(4*i - 2, 0)))
-            c.rel_line_to(0, -t * 1000)
-            c.stroke()
+            c.draw_line(w.win_size - Vec(4*i - 2, 0), relative=(0, -t * 1000),
+                        width=2, color=to_rgba(RED, .3))
 
-        c.set_source_rgba(*to_rgba(YELLOW, .3))
         for i, t in enumerate(self.world_times):
-            c.move_to(*(w.win_size - Vec(4*i, 0)))
-            c.rel_line_to(0, -t * 1000)
-            c.stroke()
+            c.draw_line(w.win_size - Vec(4*i, 0), relative=(0, -t * 1000),
+                        width=2, color=to_rgba(YELLOW, .3))
 
         # 25, 30, 60 FPS marks
-        c.set_line_width(.5)
         graph_width = 4 * len(self.draw_times)
         for fps, color in ((25,ORANGE), (30,GREEN), (60,BLUE)):
-            c.set_source_rgba(*to_rgba(color, .3))
-            c.move_to(*(w.win_size - Vec(graph_width, 1000/fps)))
-            c.rel_line_to(graph_width, 0)
-            c.stroke()
+            c.draw_line(w.win_size - Vec(graph_width, 1000/fps),
+                        relative=(graph_width, 0),
+                        width=.5, color=to_rgba(color, .3))
 
         now = time()
         dt = now - self.draw_last
