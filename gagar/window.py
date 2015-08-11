@@ -1,6 +1,7 @@
 from gi.repository import Gtk, Gdk
 
 from agarnet.vec import Vec
+from .drawutils import Canvas
 
 
 class WorldViewer(object):
@@ -110,7 +111,8 @@ class WorldViewer(object):
             self.screen_scale = 1
             self.world_center = Vec(0, 0)
 
-    def draw(self, _, c):
+    def draw(self, widget, cairo_context):
+        c = Canvas(cairo_context)
         if self.draw_subscriber:
             self.recalculate()
             self.draw_subscriber.on_draw_background(c, self)
