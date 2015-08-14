@@ -1,3 +1,7 @@
-__pycache__
-*.py[cod]
-.idea/
+__pycache__/
+*.py[doc]
+
+agarnet.egg-info/
+build/
+dist/
+MANIFEST
