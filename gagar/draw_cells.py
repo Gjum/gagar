@@ -101,24 +101,24 @@ class ForceFields(Subscriber):
         split_dist = 760
         for cell in w.player.own_cells:
             pos = w.world_to_screen_pos(cell.pos)
-            radius = split_dist + cell.size / 2
+            radius = split_dist + cell.size * .7071
             c.stroke_circle(pos, w.world_to_screen_size(radius),
                             width=3, color=to_rgba(PURPLE, .5))
 
         own_max_size = max(c.size for c in w.player.own_cells)
         own_min_mass = min(c.mass for c in w.player.own_cells)
         for cell in w.world.cells.values():
-            if cell.is_food or cell.is_ejected_mass:
-                continue
+            if cell.size < 60:
+                continue  # cannot split
             if cell.cid in w.player.own_ids:
-                continue
+                continue  # own cell, not hostile
             pos = w.world_to_screen_pos(cell.pos)
             if cell.is_virus:
                 if own_max_size > cell.size:  # dangerous virus
                     c.stroke_circle(pos, w.world_to_screen_size(own_max_size),
                                     width=3, color=to_rgba(RED, .5))
             elif cell.mass > own_min_mass * 1.25 * 2:  # can split+kill me
-                radius = split_dist + cell.size / 2
+                radius = max(split_dist + cell.size * .7071, cell.size)
                 c.stroke_circle(pos, w.world_to_screen_size(radius),
                                 width=3, color=to_rgba(RED, .5))
 
