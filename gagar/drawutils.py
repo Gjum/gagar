@@ -146,7 +146,7 @@ class Canvas(object):
         if color: c.set_source_rgba(*color)
         c.move_to(*start)
         if relative:
-            c.rel_line_to(relative)
+            c.rel_line_to(*relative)
         else:
             for point in points:
                 c.line_to(*point)
