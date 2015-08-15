@@ -97,7 +97,6 @@ class CellHostility(Subscriber):
 
 class ForceFields(Subscriber):
     def on_draw_cells(self, c, w):
-        if not w.player.is_alive: return  # nothing to be hostile against
         split_dist = 760
         for cell in w.player.own_cells:
             pos = w.world_to_screen_pos(cell.pos)
@@ -105,8 +104,12 @@ class ForceFields(Subscriber):
             c.stroke_circle(pos, w.world_to_screen_size(radius),
                             width=3, color=to_rgba(PURPLE, .5))
 
-        own_max_size = max(c.size for c in w.player.own_cells)
-        own_min_mass = min(c.mass for c in w.player.own_cells)
+        if w.player.is_alive:
+            own_max_size = max(c.size for c in w.player.own_cells)
+            own_min_mass = min(c.mass for c in w.player.own_cells)
+        else:  # spectating or dead, still draw some lines
+            own_max_size = own_min_mass = 0
+
         for cell in w.world.cells.values():
             if cell.size < 60:
                 continue  # cannot split
