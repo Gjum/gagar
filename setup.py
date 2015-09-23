@@ -18,7 +18,7 @@ setup(name='gagar',
       ],
       entry_points={'gui_scripts': ['gagar = gagar.main:main']},
       classifiers=[
-          'Development Status :: 5 - Production/Stable',
+          'Development Status :: 4 - Beta',
           'Environment :: X11 Applications :: GTK',
           'Intended Audience :: End Users/Desktop',
           'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
