@@ -5,7 +5,7 @@ gagar
 [![Number of PyPI downloads](https://img.shields.io/pypi/dm/gagar.svg?style=flat)](https://pypi.python.org/pypi/gagar/)
 [![Join the chat at https://gitter.im/Gjum/gagar](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Gjum/gagar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Standalone graphical [agar.io](http://agar.io/) Python client using GTK
+Standalone graphical [agar.io](http://agar.io/) Python client using GTK and [`agarnet`](https://github.com/Gjum/agarnet)
 
 ![Screenshot of gagar](http://lunarco.de/gagar/img/2015-08-01-151935_1000x562_scrot.png)
 
@@ -24,7 +24,7 @@ Features
 - better virus interaction
 - zoom
 - make it work with Ogar
-- documentation
+- documentation (for now, look at [the `agarnet` docs](https://github.com/Gjum/agarnet/tree/v0.2.1/doc))
 - config file
 
 Installation
@@ -35,10 +35,10 @@ Under Arch Linux, run
     pacman -S python-gobject python-cairo pygtk
 
 Other distros should have similar packages.
-Someone told me it works on Mac using MacPorts.
+Someone told me it even works on Mac using MacPorts.
 If you get it to work, please comment on [this issue](https://github.com/Gjum/gagar/issues/8), so I can add instructions for your system.
 
-The client itself cn be installed from [PyPI](https://pypi.python.org/pypi?name=gagar&:action=display) with
+The client itself can be installed from [PyPI](https://pypi.python.org/pypi?name=gagar&:action=display) with
 
     pip install gagar
 
