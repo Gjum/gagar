@@ -13,7 +13,7 @@ setup(name='gagar',
       url='https://github.com/Gjum/gagar',
       license='GPLv3',
       install_requires=[
-          'agarnet >= 0.1.3',
+          'agarnet >= 0.2.1',
           # TODO add gi, gobject, cairo requirements
       ],
       entry_points={'gui_scripts': ['gagar = gagar.main:main']},
