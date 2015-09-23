@@ -20,9 +20,8 @@ class NativeControl(Subscriber):
         self.movement_delta = Vec()
 
     def send_mouse(self):
-        if self.client.player.is_alive:
-            target = self.client.player.center + self.movement_delta
-            self.client.send_target(*target)
+        target = self.client.player.center + self.movement_delta
+        self.client.send_target(*target)
 
     def on_world_update_post(self):
         # keep cells moving even when mouse stands still
@@ -41,7 +40,13 @@ class NativeControl(Subscriber):
             self.client.send_split()
 
     def on_key_pressed(self, val, char):
-        if char == 'w':
+        if char == 's':
+            self.client.send_spectate()
+        elif char == 'q':
+            self.client.send_spectate_toggle()
+        elif char == 'r' or val == Gdk.KEY_Return:
+            self.client.send_respawn()
+        elif char == 'w':
             self.send_mouse()
             self.client.send_shoot()
         elif val == Gdk.KEY_space:
@@ -96,10 +101,13 @@ class Logger(Subscriber):
 
     def on_sock_open(self):
         self.on_update_msg('Connected to %s' % self.client.address)
-        self.on_update_msg('Token: %s' % self.client.token)
+        self.on_update_msg('Token: %s' % self.client.server_token)
 
     def on_world_rect(self, **kwargs):
         self.on_update_msg('World is from %(left)i:%(top)i to %(right)i:%(bottom)i' % kwargs)
+
+    def on_server_version(self, number, text):
+        self.on_log_msg('Server version %s from %s' % (number, text))
 
     def on_cell_eaten(self, eater_id, eaten_id):
         player = self.client.player
@@ -248,16 +256,12 @@ class GtkControl(Subscriber):
         self.world_viewer.drawing_area.queue_draw()
 
     def on_key_pressed(self, val, char):
-        if char == 'q' or val == Gdk.KEY_Escape:
+        if val == Gdk.KEY_Escape:
             self.client.disconnect()
             Gtk.main_quit()
-        elif char == 's':
-            self.client.send_spectate()
-        elif char == 'r' or val == Gdk.KEY_Return:
-            self.client.send_respawn()
         elif char == 'c':  # reconnect to any server
             self.client.disconnect()
-            address, token, *_ = find_server()
+            address, token = find_server()
             self.client.connect(address, token)
             self.world_viewer.focus_player(self.client.player)
 
@@ -281,10 +285,10 @@ def main():
         address = None
 
     if address and address[0] in 'Pp':
-        address, *_ = get_party_address(token)
+        address = get_party_address(token)
 
     if not address:
-        address, token, *_ = find_server()
+        address, token = find_server()
 
     GtkControl(address, token, nick)
     gtk_main_loop()

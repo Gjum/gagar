@@ -57,6 +57,7 @@ Controls
 | Key       | Action                |
 |:----------|:----------------------|
 | `S`       | spectate              |
+| `Q`       | toggle spectate mode  |
 | `R`/`RETURN` | respawn            |
 | `Mouse`   | movement direction    |
 | `W`       | shoot small cell      |
@@ -72,7 +73,7 @@ Controls
 | `F1`      | show/hide overlays    |
 | `F2`      | change background color |
 | `F3`      | show/hide FPS meter   |
-| `Q`/`ESC` | quit                  |
+| `ESC`     | quit                  |
 
 About
 -----
