@@ -242,9 +242,6 @@ class GtkControl(Subscriber):
         client.connect(address, token)
 
         # use AkiraYasha's Facebook token to start with more mass (> 43, lvl 56)
-        self.client.send_facebook(
-            'g2gDYQFtAAAAEKO6L3c8C8/eXtbtbVJDGU5tAAAAUvOo7JuWAVSczT5Aj0eo0CvpeU8ijGzKy/gXBVCxhP5UO+ERH0jWjAo9bU1V7dU0GmwFr+SnzqWohx3qvG8Fg8RHlL17/y9ifVWpYUdweuODb9c=')
-        print("Using AkiraYasha's Facebook token")
 
         gtk_watch_client(client)
 
