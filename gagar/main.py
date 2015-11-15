@@ -1,6 +1,8 @@
 import random
 import sys
 
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gdk
 
 from agarnet.client import Client
