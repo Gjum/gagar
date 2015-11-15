@@ -46,7 +46,7 @@ class RemergeTimes(Subscriber):
         for cell in player.own_cells:
             split_for = now - self.split_times[cell.cid]
             # formula by DebugMonkey
-            ttr = (player.total_mass * 20 + 30000) / 1000 - split_for
+            ttr = player.total_mass * 0.02 + 30 - split_for
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
             pos.isub(Vec(0, (info_size + nick_size(cell, w)) / 2))
@@ -83,13 +83,13 @@ class CellHostility(Subscriber):
                     color = RED
                 else:
                     continue  # no threat, do not mark
-            elif own_min_mass > cell.mass * 1.25 * 2:
+            elif own_min_mass > cell.mass * 1.33 * 2:
                 color = PURPLE
-            elif own_min_mass > cell.mass * 1.25:
+            elif own_min_mass > cell.mass * 1.33:
                 color = GREEN
-            elif cell.mass > own_min_mass * 1.25 * 2:
+            elif cell.mass > own_min_mass * 1.33 * 2:
                 color = RED
-            elif cell.mass > own_min_mass * 1.25:
+            elif cell.mass > own_min_mass * 1.33:
                 color = ORANGE
             c.stroke_circle(pos, w.world_to_screen_size(cell.size),
                             width=5, color=color)
@@ -120,7 +120,7 @@ class ForceFields(Subscriber):
                 if own_max_size > cell.size:  # dangerous virus
                     c.stroke_circle(pos, w.world_to_screen_size(own_max_size),
                                     width=3, color=to_rgba(RED, .5))
-            elif cell.mass > own_min_mass * 1.25 * 2:  # can split+kill me
+            elif cell.mass > own_min_mass * 1.33 * 2:  # can split+kill me
                 radius = max(split_dist + cell.size * .7071, cell.size)
                 c.stroke_circle(pos, w.world_to_screen_size(radius),
                                 width=3, color=to_rgba(RED, .5))
