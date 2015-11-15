@@ -239,7 +239,13 @@ class GtkControl(Subscriber):
         key(Gdk.KEY_F3, FpsMeter(50), disabled=True)
 
         client.player.nick = nick
-        client.connect(address, token)
+
+        try:
+            client.connect(address, token)
+        except ConnectionResetError:
+            # sometimes connection gets closed on first attempt
+            print('Connection got closed on first attempt, retrying')
+            client.connect(address, token)
 
         # use AkiraYasha's Facebook token to start with more mass (> 43, lvl 56)
 
