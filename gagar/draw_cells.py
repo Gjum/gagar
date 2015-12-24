@@ -44,13 +44,14 @@ class RemergeTimes(Subscriber):
             return  # dead or only one cell, no remerge time to display
         now = time()
         for cell in player.own_cells:
+            if cell.cid not in self.split_times: continue
             split_for = now - self.split_times[cell.cid]
             # formula by DebugMonkey
             ttr = player.total_mass * 0.02 + 30 - split_for
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
             pos.isub(Vec(0, (info_size + nick_size(cell, w)) / 2))
-            c.draw_text(pos, 'TTR %.1fs after %.1fs' % (ttr, split_for),
+            c.draw_text(pos, 'TTR %.1fs' % ttr,
                         align='center', outline=(BLACK, 2), size=info_size)
 
 
