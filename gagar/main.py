@@ -249,8 +249,6 @@ class GtkControl(Subscriber):
             print('Connection got closed on first attempt, retrying')
             client.connect(address, token)
 
-        # use AkiraYasha's Facebook token to start with more mass (> 43, lvl 56)
-
         gtk_watch_client(client)
 
         self.world_viewer = wv = WorldViewer(client.world)

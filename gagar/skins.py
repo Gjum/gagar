@@ -4,14 +4,13 @@ import urllib.request
 
 import cairo
 
-from agarnet.utils import moz_headers, special_names
+from agarnet.utils import default_headers, special_names
 from .drawutils import TWOPI
 from .subscriber import Subscriber
 
 
-# TODO support agariomods etc. skins
-
-skin_cache = {}
+skin_cache = {}  # raw PNG data
+skin_surface_cache = {}  # images in cairo format
 
 
 def get_skin(name):
@@ -24,16 +23,13 @@ def get_skin(name):
             skin_url = 'http://agar.io/skins/%s.png' % urllib.request.quote(
                 name)
             opener = urllib.request.build_opener()
-            opener.addheaders = moz_headers
+            opener.addheaders = default_headers
             skin_cache[name] = opener.open(skin_url).read()
 
         t = Thread(target=loader)
         t.setDaemon(True)
         t.start()
     return skin_cache[name]
-
-
-skin_surface_cache = {}
 
 
 class CellSkins(Subscriber):

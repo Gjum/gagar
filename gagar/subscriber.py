@@ -2,11 +2,11 @@ class Subscriber(object):
     """Base class for event handlers via on_*() methods."""
 
     def __getattr__(self, func_name):
-        # still throw error when not getting an on_*() method/attribute
+        # still throw error when not getting an on_* attribute
         if 'on_' != func_name[:3]:
             raise AttributeError("'%s' object has no attribute '%s'"
                                  % (self.__class__.__name__, func_name))
-        return lambda *args, **kwargs: None
+        return lambda *args, **kwargs: None  # default handler does nothing
 
 
 class MultiSubscriber(Subscriber):
@@ -20,7 +20,6 @@ class MultiSubscriber(Subscriber):
         return subscriber
 
     def __getattr__(self, func_name):
-        # still throw error when not getting an on_*() method/attribute
         super(MultiSubscriber, self).__getattr__(func_name)
 
         def wrapper(*args, **kwargs):
