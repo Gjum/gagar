@@ -46,8 +46,8 @@ class RemergeTimes(Subscriber):
         for cell in player.own_cells:
             if cell.cid not in self.split_times: continue
             split_for = now - self.split_times[cell.cid]
-            # formula by DebugMonkey
-            ttr = player.total_mass * 0.02 + 30 - split_for
+            # formula by HungryBlob
+            ttr = max(30, cell.size // 5) - split_for
             if ttr < 0: continue
             pos = w.world_to_screen_pos(cell.pos)
             pos.isub(Vec(0, (info_size + nick_size(cell, w)) / 2))
