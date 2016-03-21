@@ -276,7 +276,7 @@ def main():
           "This is free software, and you are welcome to redistribute it\n"
           "under certain conditions; see LICENSE.txt for details.\n"
           "Project homepage: https://github.com/Gjum/gagar\n"
-          "Version: 0.1.1\n")
+          "Version: 0.1.4\n")
 
     if len(sys.argv) > 1 and sys.argv[1] in ('-h', '--help'):
         print("Usage: %s [nick]" % sys.argv[0])
