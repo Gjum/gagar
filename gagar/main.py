@@ -202,6 +202,7 @@ class GtkControl(Subscriber):
         # order is important, first subscriber gets called first
 
         self.multi_sub = MultiSubscriber(self)
+
         def key(keycode, *subs, disabled=False):
             # subscribe all these subscribers, toggle them when key is pressed
             if isinstance(keycode, str): keycode = ord(keycode)
@@ -214,8 +215,8 @@ class GtkControl(Subscriber):
         # background
         key(Gdk.KEY_F2, SolidBackground())
         key(Gdk.KEY_F2, SolidBackground(WHITE), disabled=True)
-        key('b', WorldBorderDrawer())
-        key('g', GridDrawer())
+        # key('b', WorldBorderDrawer())
+        # key('g', GridDrawer())
 
         self.multi_sub.sub(CellsDrawer())
 
@@ -232,9 +233,9 @@ class GtkControl(Subscriber):
 
         # HUD
         key(Gdk.KEY_F1,
-            Minimap(),
+            # Minimap(),
             Leaderboard(),
-            ExperienceMeter(),
+            # ExperienceMeter(),
             Logger(client),
             MassGraph(client),
         )
