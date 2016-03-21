@@ -58,7 +58,7 @@ class RemergeTimes(Subscriber):
 class CellMasses(Subscriber):
     def on_draw_cells(self, c, w):
         for cell in w.world.cells.values():
-            if cell.is_food or cell.is_ejected_mass:
+            if cell.is_food or cell.is_ejected_mass or cell.mass < 5:
                 continue
             pos = w.world_to_screen_pos(cell.pos)
             if cell.name:
