@@ -6,14 +6,14 @@ except ImportError:
 setup(name='gagar',
       packages=['gagar'],
       py_modules=['gagar'],
-      version='0.1.2',
+      version='0.1.3',
       description='Standalone graphical agar.io Python client using GTK and agarnet',
       author='Gjum',
       author_email='code.gjum@gmail.com',
       url='https://github.com/Gjum/gagar',
       license='GPLv3',
       install_requires=[
-          'agarnet >= 0.2.3',
+          'agarnet >= 0.2.4',
           # TODO add gi, gobject, cairo requirements
       ],
       entry_points={'gui_scripts': ['gagar = gagar.main:main']},
