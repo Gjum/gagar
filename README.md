@@ -1,3 +1,7 @@
+# OUTDATED
+
+Due to heavy changes in the web client and protocol, this project does not work anymore.
+
 gagar
 =====
 
